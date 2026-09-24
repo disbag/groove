@@ -1,9 +1,20 @@
 <script setup>
+import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { isFavorite, toggleFavorite } from '../favorites.js'
 import { formatPrice, shopsLabel } from '../format.js'
 
 const props = defineProps({ album: { type: Object, required: true } })
+
+// Если обложка Discogs не загрузилась (Cloudflare в РФ), показываем фото из магазина
+const failed = ref(false)
+const src = computed(() => (failed.value ? props.album.s : props.album.cv || props.album.c))
+const srcset = computed(() =>
+  !failed.value && props.album.c && props.album.cv ? `${props.album.c} 150w, ${props.album.cv} 600w` : undefined,
+)
+function onError() {
+  if (!failed.value && props.album.s) failed.value = true
+}
 </script>
 
 <template>
@@ -11,13 +22,14 @@ const props = defineProps({ album: { type: Object, required: true } })
     <RouterLink :to="`/album/${album.id}`" class="album-link">
       <div class="cover">
         <img
-          v-if="album.cv || album.c"
-          :src="album.cv || album.c"
-          :srcset="album.c && album.cv ? `${album.c} 150w, ${album.cv} 600w` : undefined"
+          v-if="src"
+          :src="src"
+          :srcset="srcset"
           sizes="(max-width: 600px) 45vw, 220px"
           :alt="`${album.a} — ${album.t}`"
           loading="lazy"
           referrerpolicy="no-referrer"
+          @error="onError"
         />
         <div v-else class="cover-placeholder" aria-hidden="true"></div>
         <span v-if="album.col" class="chip chip-colour" title="Есть цветные издания">цветной</span>

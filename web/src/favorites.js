@@ -45,6 +45,6 @@ export function toggleFavorite(album) {
     state.items.splice(index, 1)
   } else {
     // Снимок нужен, чтобы список рисовался сразу, даже если альбом пропал из продажи
-    state.items.unshift({ id, a: album.a, t: album.t, c: album.c, p: album.p, added: Date.now() })
+    state.items.unshift({ id, a: album.a, t: album.t, c: album.c, s: album.s, p: album.p, added: Date.now() })
   }
 }

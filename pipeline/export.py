@@ -64,11 +64,13 @@ def run(conn, out_dir: Path) -> dict:
         shutil.rmtree(out_dir)
     (out_dir / "card").mkdir(parents=True)
 
-    # Обложка: Discogs, а если её нет — фото из самого дешёвого предложения магазина
+    # Обложка: Discogs, а если её нет — фото из самого дешёвого предложения магазина.
+    # shop_image нужен и сайту: i.discogs.com работает через Cloudflare, который в РФ бывает недоступен.
     for card in cards:
         fallback = next((o["image_url"] for o in by_master.get(card["id"], []) if o["image_url"]), None)
         card["thumb"] = card["cover_thumb"] or fallback
         card["cover"] = card["cover_url"] or fallback
+        card["shop_image"] = fallback if fallback != card["cover"] else None
 
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     for card in cards:
@@ -115,8 +117,8 @@ def run(conn, out_dir: Path) -> dict:
 def _list_item(card: dict) -> dict:
     return {
         "id": card["id"], "a": card["artist_display"], "t": card["title"], "y": card["year"],
-        "c": card["thumb"], "cv": card["cover"], "p": card["min_price"], "n": card["shops_in_stock"],
-        "col": card["has_coloured"],
+        "c": card["thumb"], "cv": card["cover"], "s": card["shop_image"], "p": card["min_price"],
+        "n": card["shops_in_stock"], "col": card["has_coloured"],
     }
 
 
@@ -129,6 +131,7 @@ def _card_json(card: dict, offers: list[dict], master: dict | None, now: str) ->
         "genres": card["genres"],
         "styles": card["styles"],
         "cover": card["cover"],
+        "shop_image": card["shop_image"],
         "discogs": card["discogs_uri"],
         "min_price": card["min_price"],
         "tracklist": (master or {}).get("tracklist") or [],

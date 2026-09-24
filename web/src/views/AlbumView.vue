@@ -9,12 +9,15 @@ const props = defineProps({ id: String, meta: Object })
 const album = ref(null)
 const missing = ref(false)
 const showTracks = ref(false)
+const coverFailed = ref(false)
+const cover = computed(() => (coverFailed.value ? album.value?.shop_image : album.value?.cover))
 
 watch(
   () => props.id,
   async (id) => {
     album.value = null
     missing.value = false
+    coverFailed.value = false
     try {
       album.value = await getAlbum(id)
       document.title = `${album.value.artist} — ${album.value.title} · Винил · цены`
@@ -31,7 +34,10 @@ const genreNames = computed(() => {
 })
 const shopCount = computed(() => new Set((album.value?.offers || []).map((o) => o.shop)).size)
 const snapshot = computed(() =>
-  album.value && { id: album.value.id, a: album.value.artist, t: album.value.title, c: album.value.cover, p: album.value.min_price },
+  album.value && {
+    id: album.value.id, a: album.value.artist, t: album.value.title, c: album.value.cover,
+    s: album.value.shop_image, p: album.value.min_price,
+  },
 )
 
 function edition(offer) {
@@ -50,7 +56,13 @@ function edition(offer) {
     <RouterLink to="/" class="back muted">← Каталог</RouterLink>
     <div class="album-layout">
       <div class="album-cover">
-        <img v-if="album.cover" :src="album.cover" :alt="`${album.artist} — ${album.title}`" referrerpolicy="no-referrer" />
+        <img
+          v-if="cover"
+          :src="cover"
+          :alt="`${album.artist} — ${album.title}`"
+          referrerpolicy="no-referrer"
+          @error="album.shop_image && (coverFailed = true)"
+        />
         <div v-else class="cover-placeholder"></div>
       </div>
 
