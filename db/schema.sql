@@ -79,7 +79,8 @@ create table if not exists scrape_run ( -- журнал прогонов: кон
 );
 
 -- Одна строка на альбом, у которого есть хотя бы одно предложение в наличии.
-create or replace view catalog_card as
+-- security_invoker: представление подчиняется правам вызывающего, а не владельца.
+create or replace view catalog_card with (security_invoker = true) as
 select m.id, m.artist_display, m.title, m.year, m.genres, m.styles,
        m.cover_url, m.cover_thumb, m.discogs_uri,
        min(o.price)                   as min_price,
@@ -90,3 +91,11 @@ select m.id, m.artist_display, m.title, m.year, m.genres, m.styles,
 from master m
 join offer o on o.master_id = m.id and o.in_stock and o.price is not null
 group by m.id;
+
+-- Supabase открывает схему public через REST API (PostgREST). Сайт к базе не обращается, поэтому
+-- включаем RLS без политик: роли anon/authenticated не видят ничего, конвейер работает ролью postgres.
+alter table shop enable row level security;
+alter table master enable row level security;
+alter table release enable row level security;
+alter table offer enable row level security;
+alter table scrape_run enable row level security;
