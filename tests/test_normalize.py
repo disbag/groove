@@ -78,3 +78,11 @@ def test_master_values():
     assert (v["cover_url"], v["cover_thumb"]) == ("p600", "p150")
     assert v["tracklist"] == [{"p": "A", "t": "Autobahn", "d": "22:43"}]
     assert v["year"] == 1974 and v["discogs_uri"].startswith("https://")
+
+
+def test_fold_and_title_key():
+    from pipeline.normalize import fold, title_key
+    assert fold("Björk Gling-Gló") == "bjork gling-glo"
+    assert fold("Мой Ёжик Йод") == "мой ежик йод"  # й сохраняется, ё → е
+    assert title_key("Gling-Gló") == title_key("GLING GLO")
+    assert title_key("Группа Крови") == "группакрови"

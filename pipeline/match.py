@@ -13,7 +13,7 @@ from difflib import SequenceMatcher
 from psycopg.types.json import Jsonb
 
 from .discogs import Discogs
-from .normalize import barcode_key, clean_barcode, clean_discogs_name, detect_color, title_key
+from .normalize import barcode_key, clean_barcode, clean_discogs_name, detect_color, fold, title_key
 
 log = logging.getLogger(__name__)
 TEXT_MATCH_THRESHOLD = 0.82
@@ -198,10 +198,12 @@ def _local_master_by_text(conn, offer: dict) -> int | None:
 
 
 def _backfill_title_keys(conn) -> None:
-    rows = conn.execute("select id, title from master where title_key is null").fetchall()
-    if rows:
+    """Заполняет и пересчитывает master.title_key (например, после изменения правил нормализации)."""
+    rows = conn.execute("select id, title, title_key from master").fetchall()
+    stale = [(title_key(r["title"]), r["id"]) for r in rows if r["title_key"] != title_key(r["title"])]
+    if stale:
         with conn.cursor() as cur:
-            cur.executemany("update master set title_key = %s where id = %s", [(title_key(r["title"]), r["id"]) for r in rows])
+            cur.executemany("update master set title_key = %s where id = %s", stale)
 
 
 _COMPILATION_ARTISTS = {"ost", "v/a", "va", "сборник", "various", "various artists", "саундтрек"}
@@ -218,7 +220,7 @@ def _text_query(offer: dict) -> str:
 
 
 def _tokens(text: str) -> set[str]:
-    return set(re.findall(r"\w+", text.lower())) - _STOP_TOKENS
+    return set(re.findall(r"\w+", fold(text))) - _STOP_TOKENS
 
 
 _STOP_TOKENS = {"the", "a", "lp", "vinyl", "and", "of", "black", "gram", "180", "edition", "limited", "coloured", "colored"}
@@ -234,7 +236,7 @@ def _album_coverage(offer: dict, release_title: str) -> float:
 
 
 def _similarity(a: str, b: str) -> float:
-    norm = lambda s: " ".join(sorted(re.sub(r"[^\w\s]", " ", s.lower()).split()))  # noqa: E731
+    norm = lambda s: " ".join(sorted(re.sub(r"[^\w\s]", " ", fold(s)).split()))  # noqa: E731
     return SequenceMatcher(None, norm(a), norm(b)).ratio()
 
 

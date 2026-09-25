@@ -2,6 +2,7 @@
 
 import html
 import re
+import unicodedata
 
 _BARCODE_LENGTHS = {8, 12, 13, 14}
 
@@ -147,7 +148,13 @@ def to_price(value) -> int | None:
         return None
 
 
+def fold(text: str | None) -> str:
+    """Нижний регистр без диакритики: «Björk Gling-Gló» → «bjork gling-glo». Кириллицу не трогаем (кроме ё → е)."""
+    text = (text or "").lower().replace("ё", "е").replace("й", "\0")
+    text = "".join(ch for ch in unicodedata.normalize("NFKD", text) if not unicodedata.combining(ch))
+    return text.replace("\0", "й")
+
+
 def title_key(text: str | None) -> str:
-    """Ключ для точного сравнения названий: без регистра, ё = е, только буквы и цифры."""
-    text = (text or "").lower().replace("ё", "е")
-    return re.sub(r"[\W_]+", "", text)
+    """Ключ для точного сравнения названий: без регистра и диакритики, только буквы и цифры."""
+    return re.sub(r"[\W_]+", "", fold(text))
