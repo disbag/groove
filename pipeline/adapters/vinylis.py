@@ -20,7 +20,10 @@ def fetch(http: PoliteSession) -> list[Offer]:
     http.throttle(LISTING, CRAWL_DELAY)
     offers: dict[str, Offer] = {}
     for page in range(1, 1000):
-        batch = parse_listing(http.get(LISTING, params={"PAGEN_1": page}).text)
+        html = _html.get_page(http, LISTING, {"PAGEN_1": page}, first=page == 1)
+        if html is None:
+            break  # за последней страницей — 404
+        batch = parse_listing(html)
         fresh = [o for o in batch if o.external_id not in offers]
         if not fresh:
             break  # за последней страницей Битрикс отдаёт её же

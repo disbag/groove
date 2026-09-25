@@ -21,7 +21,10 @@ def fetch(http: PoliteSession) -> list[Offer]:
     for category in CATEGORIES:
         seen_in_category: set[str] = set()
         for page in range(1, 500):
-            batch = parse_listing(http.get(SHOP.base_url + category, params={"page": page}).text)
+            html = _html.get_page(http, SHOP.base_url + category, {"page": page}, first=page == 1)
+            if html is None:
+                break
+            batch = parse_listing(html)
             fresh = [o for o in batch if o.external_id not in seen_in_category]
             if not fresh:
                 break

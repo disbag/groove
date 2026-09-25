@@ -12,6 +12,10 @@ log = logging.getLogger(__name__)
 
 def run(conn, shop_codes: list[str] | None = None) -> list[dict]:
     http = PoliteSession()
+    conn.execute(
+        """update scrape_run set status = 'aborted', finished_at = now()
+           where status = 'running' and started_at < now() - interval '6 hours'"""
+    )
     summary = []
     for code, module in ADAPTERS.items():
         if shop_codes and code not in shop_codes:

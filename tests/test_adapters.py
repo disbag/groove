@@ -69,3 +69,38 @@ def test_pagination_stops_on_repeated_page():
     http = FakeHttp(load("vinylis"))
     offers = vinylis.fetch(http)
     assert len(offers) == 2 and http.calls == 2
+
+
+class NotFoundAfterFirst(FakeHttp):
+    """Первая страница есть, дальше 404 — как у vinyl-is, plstkwrld и sferazvyka."""
+
+    def get(self, url, params=None):
+        import requests
+
+        self.calls += 1
+        if self.calls > 1:
+            response = requests.Response()
+            response.status_code = 404
+            raise requests.HTTPError("404", response=response)
+        return type("Response", (), {"text": self.html})()
+
+
+def test_pagination_stops_on_404():
+    http = NotFoundAfterFirst(load("vinylis"))
+    assert len(vinylis.fetch(http)) == 2
+    offers = {}
+    _megagroup.fetch_folder(NotFoundAfterFirst(load("plstk")), "https://plstkwrld.com", "/magazin/folder/x", offers)
+    assert len(offers) == 2
+
+
+def test_first_page_404_is_an_error():
+    import pytest
+    import requests
+
+    class AlwaysNotFound(NotFoundAfterFirst):
+        def get(self, url, params=None):
+            self.calls = 1
+            return super().get(url, params)
+
+    with pytest.raises(requests.HTTPError):
+        vinylis.fetch(AlwaysNotFound(""))

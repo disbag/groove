@@ -21,7 +21,10 @@ def fetch_folder(http: PoliteSession, base_url: str, folder: str, into: dict[str
     """Обходит страницы папки и добавляет новые позиции в into (по product_id)."""
     for page in range(0, 500):
         url = f"{base_url}{folder}" + (f"/p/{page}" if page else "")
-        batch = parse_listing(http.get(url).text, base_url)
+        html = _html.get_page(http, url, first=page == 0)
+        if html is None:
+            break  # у папки меньше страниц: /p/N отвечает 404
+        batch = parse_listing(html, base_url)
         fresh = [o for o in batch if o.external_id not in into]
         if not batch or (page and not fresh and all(o.external_id in into for o in batch)):
             break

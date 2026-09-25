@@ -16,7 +16,10 @@ LISTING = f"{SHOP.base_url}/catalog/plastinki/"
 def fetch(http: PoliteSession) -> list[Offer]:
     offers: dict[str, Offer] = {}
     for page in range(1, 500):
-        batch = parse_listing(http.get(LISTING, params={"PAGEN_1": page}).text)
+        html = _html.get_page(http, LISTING, {"PAGEN_1": page}, first=page == 1)
+        if html is None:
+            break
+        batch = parse_listing(html)
         fresh = [o for o in batch if o.external_id not in offers]
         if not fresh:
             break
