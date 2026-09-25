@@ -1,0 +1,26 @@
+name: Probe shops
+
+# Ручная проверка: пускают ли магазины серверы GitHub. Один запрос на магазин.
+on: workflow_dispatch
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Один запрос к листингу каждого магазина
+        run: |
+          UA="GrooveBot/0.1 (+https://disbag.github.io/groove/; hobby price aggregator)"
+          for u in \
+            "https://vinyl-is.ru/catalog/vinilovye_plastinki/" \
+            "https://plstkwrld.com/magazin/folder/hip-hop" \
+            "https://newartstore.ru/catalog/vinilovye_plastinki/" \
+            "https://vidika.su/category/russkiy-vinil/" \
+            "https://stereozona.ru/catalog/plastinki/" \
+            "https://sferazvyka.ru/shop/folder/novye" \
+            "https://www.audiomania.ru/vinilovye_plastinki/" \
+            "https://transylvania.ru/index.php?link=1&type=10"; do
+            code=$(curl -s -o page.html -w '%{http_code}' -A "$UA" -H 'Accept-Language: ru-RU,ru;q=0.9' --max-time 30 "$u" || echo "ERR")
+            bot=$(grep -c -i -E 'Проверка безопасности|captcha|challenge|ddos-guard' page.html || true)
+            echo "$code $(wc -c < page.html)B bot-marks=$bot $u"
+            sleep 2
+          done
