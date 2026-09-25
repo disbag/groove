@@ -7,8 +7,11 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def _load_dotenv() -> None:
-    """Подхватывает app/.env для локальной разработки, не перетирая уже заданные переменные."""
-    env = ROOT / ".env"
+    """Подхватывает app/.env (или файл из GROOVE_ENV_FILE), не перетирая уже заданные переменные.
+
+    `.env` — локальная разработка, `.env.production` — локальный запуск против боевой базы Supabase.
+    """
+    env = ROOT / os.environ.get("GROOVE_ENV_FILE", ".env")
     if not env.exists():
         return
     for line in env.read_text(encoding="utf-8").splitlines():
@@ -28,6 +31,10 @@ USER_AGENT = os.environ.get(
     "GROOVE_USER_AGENT",
     f"GrooveBot/0.1 (+{SITE_URL}; hobby price aggregator)",
 )
+
+# Магазины, которые этот запуск пропускает (если их не назвали явно в --shops). В GitHub Actions — pult:
+# он отвечает 403 серверам GitHub, поэтому собирается локально (scripts/local_run.sh).
+SHOPS_EXCLUDE = {code.strip() for code in os.environ.get("GROOVE_SHOPS_EXCLUDE", "").split(",") if code.strip()}
 
 # Вежливость к магазинам: не чаще одного запроса в секунду на хост.
 SHOP_MIN_INTERVAL = float(os.environ.get("GROOVE_SHOP_INTERVAL", "1.0"))

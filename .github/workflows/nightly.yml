@@ -25,6 +25,7 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
+      GROOVE_SHOPS_EXCLUDE: pult # отвечает 403 серверам GitHub — собирается локально (scripts/local_run.sh)
     steps:
       - uses: actions/checkout@v7
 

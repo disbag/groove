@@ -16,6 +16,9 @@ def run(conn, shop_codes: list[str] | None = None) -> list[dict]:
     for code, module in ADAPTERS.items():
         if shop_codes and code not in shop_codes:
             continue
+        if not shop_codes and code in config.SHOPS_EXCLUDE:
+            log.info("%s: пропущен (GROOVE_SHOPS_EXCLUDE)", code)
+            continue
         shop_id = db.ensure_shop(conn, module.SHOP)
         if not db.shop_is_active(conn, shop_id):
             log.info("%s: магазин выключен (shop.is_active = false)", code)

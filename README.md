@@ -36,6 +36,20 @@ Supabase (PostgreSQL) — хранилище конвейера; сайт к б�
 5. *Actions* → *Nightly update* → *Run workflow*. Первое сопоставление ~8,5 тыс. штрихкодов занимает ~5 часов;
    за ночь конвейер обрабатывает сколько успеет (`--budget-minutes`, по умолчанию 240) и продолжает в следующую ночь.
 
+## Локальный сбор (Пульт)
+
+Пульт отвечает 403 серверам GitHub, поэтому в Actions он пропускается (`GROOVE_SHOPS_EXCLUDE=pult`)
+и собирается с домашнего компьютера в ту же базу Supabase:
+
+```bash
+# app/.env.production — строка Session pooler (не попадает в git)
+read -rs "DB?Supabase Session pooler URL: " && printf 'DATABASE_URL=%s\n' "$DB" > .env.production \
+  && grep '^DISCOGS_TOKEN=' .env >> .env.production && chmod 600 .env.production
+scripts/local_run.sh              # сбор Пульта + сопоставление; лог: ~/Library/Logs/groove-local.log
+scripts/install_launchd.sh        # ежедневно в 02:30, до ночного прогона на GitHub; --remove — удалить
+.venv/bin/python scripts/copy_catalog.py --source .env --target .env.production   # перенести найденное локально
+```
+
 ## Локальная разработка
 
 ```bash
