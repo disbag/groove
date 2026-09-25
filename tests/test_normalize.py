@@ -1,5 +1,5 @@
 from pipeline.adapters.pult import extract_products
-from pipeline.match import _album_coverage, _text_query
+from pipeline.match import _album_coverage, _text_query, master_values
 from pipeline.normalize import (
     barcode_key, clean_barcode, clean_discogs_name, color_part_of_title, detect_color, detect_qty,
     split_artist_album, to_price,
@@ -62,3 +62,19 @@ def test_text_query_and_coverage():
     assert _text_query(offer) == "Euphoria"
     assert _album_coverage({"album_hint": "HUMANZ"}, "Gorillaz - G Collection") == 0
     assert _album_coverage({"album_hint": "Renegades"}, "Rage Against The Machine - Renegades") == 1
+
+
+def test_master_values():
+    data = {
+        "title": "Autobahn", "year": 1974, "genres": ["Electronic"], "styles": ["Krautrock"],
+        "artists": [{"name": "Kraftwerk", "join": "&"}, {"name": "Future (4)", "join": ""}],
+        "images": [{"type": "secondary", "uri": "s"}, {"type": "primary", "uri": "p600", "uri150": "p150"}],
+        "tracklist": [{"position": "", "type_": "heading", "title": "Side A"},
+                      {"position": "A", "type_": "track", "title": "Autobahn", "duration": "22:43"}],
+        "uri": "https://www.discogs.com/master/2994-Kraftwerk-Autobahn",
+    }
+    v = master_values(2994, data)
+    assert v["artist_display"] == "Kraftwerk & Future"
+    assert (v["cover_url"], v["cover_thumb"]) == ("p600", "p150")
+    assert v["tracklist"] == [{"p": "A", "t": "Autobahn", "d": "22:43"}]
+    assert v["year"] == 1974 and v["discogs_uri"].startswith("https://")

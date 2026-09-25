@@ -218,6 +218,49 @@ def _ensure_master(conn, discogs: Discogs, master_id: int, release_id: int | Non
     data = discogs.master(master_id) if master_id > 0 else discogs.release(-master_id)
     if not data:
         raise RuntimeError(f"Discogs не вернул {'master' if master_id > 0 else 'release'} {abs(master_id)}")
+    _upsert_master(conn, master_id, data)
+
+
+def refresh(conn, discogs: Discogs, limit: int = 500, budget_minutes: float = 15) -> dict:
+    """Перечитывает данные альбомов по кругу, начиная с самых давно обновлённых.
+
+    Ссылки на обложки у Discogs подписанные и со временем устаревают; заодно подтягиваются правки
+    в названиях, жанрах и треклистах. Обновляем только альбомы, которые сейчас есть в каталоге.
+    """
+    deadline = time.monotonic() + budget_minutes * 60
+    ids = [
+        row["id"]
+        for row in conn.execute(
+            """select m.id from master m
+               where exists (select 1 from offer o where o.master_id = m.id and o.in_stock)
+               order by m.fetched_at limit %s""",
+            (limit,),
+        )
+    ]
+    stats = defaultdict(int)
+    for master_id in ids:
+        if time.monotonic() > deadline:
+            stats["deferred"] += 1
+            continue
+        try:
+            data = discogs.master(master_id) if master_id > 0 else discogs.release(-master_id)
+        except Exception:  # noqa: BLE001
+            log.exception("альбом %s: не удалось обновить", master_id)
+            stats["errors"] += 1
+            continue
+        if not data:
+            # Удалён или слит с другим на Discogs — оставляем прежние данные, но в очередь ставим в конец
+            conn.execute("update master set fetched_at = now() where id = %s", (master_id,))
+            stats["missing"] += 1
+            continue
+        _upsert_master(conn, master_id, data)
+        stats["refreshed"] += 1
+    log.info("обновление альбомов: %s", dict(stats))
+    return dict(stats)
+
+
+def master_values(master_id: int, data: dict) -> dict:
+    """Поля таблицы master из ответа Discogs /masters/{id} или /releases/{id} (для релизов без мастера)."""
     artists = data.get("artists") or []
     artist_display = "".join(
         clean_discogs_name(a.get("name") or "") + (f" {a['join']} " if a.get("join") else "")
@@ -230,15 +273,33 @@ def _ensure_master(conn, discogs: Discogs, master_id: int, release_id: int | Non
         for t in data.get("tracklist") or [] if t.get("type_", "track") == "track"
     ]
     uri = data.get("uri") or ""
+    return {
+        "id": master_id,
+        "title": data.get("title") or "",
+        "artist_display": artist_display,
+        "year": _year(data.get("year")),
+        "genres": data.get("genres") or [],
+        "styles": data.get("styles") or [],
+        "cover_url": primary.get("uri") or None,
+        "cover_thumb": primary.get("uri150") or None,
+        "tracklist": tracklist,
+        "discogs_uri": uri if uri.startswith("http") else (f"https://www.discogs.com{uri}" if uri else None),
+    }
+
+
+def _upsert_master(conn, master_id: int, data: dict) -> None:
+    values = master_values(master_id, data)
+    values["tracklist"] = Jsonb(values["tracklist"])
     conn.execute(
         """insert into master (id, title, artist_display, year, genres, styles, cover_url, cover_thumb, tracklist, discogs_uri)
-           values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) on conflict (id) do nothing""",
-        (
-            master_id, data.get("title") or "", artist_display, _year(data.get("year")),
-            data.get("genres") or [], data.get("styles") or [],
-            primary.get("uri") or None, primary.get("uri150") or None, Jsonb(tracklist),
-            uri if uri.startswith("http") else (f"https://www.discogs.com{uri}" if uri else None),
-        ),
+           values (%(id)s, %(title)s, %(artist_display)s, %(year)s, %(genres)s, %(styles)s,
+                   %(cover_url)s, %(cover_thumb)s, %(tracklist)s, %(discogs_uri)s)
+           on conflict (id) do update set
+             title = excluded.title, artist_display = excluded.artist_display, year = excluded.year,
+             genres = excluded.genres, styles = excluded.styles, cover_url = excluded.cover_url,
+             cover_thumb = excluded.cover_thumb, tracklist = excluded.tracklist,
+             discogs_uri = excluded.discogs_uri, fetched_at = now()""",
+        values,
     )
 
 
