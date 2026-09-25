@@ -53,7 +53,9 @@ def run(conn, out_dir: Path) -> dict:
     shops = conn.execute(
         """select s.code, s.name, s.base_url, count(o.id) filter (where o.in_stock and o.master_id is not null) as offers
            from shop s left join offer o on o.shop_id = s.id
-           where s.is_active group by s.id order by s.name"""
+           where s.is_active group by s.id
+           having count(o.id) filter (where o.in_stock and o.master_id is not null) > 0
+           order by s.name"""
     ).fetchall()
 
     by_master: dict[int, list[dict]] = {}

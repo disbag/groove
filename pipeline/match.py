@@ -232,7 +232,8 @@ def refresh(conn, discogs: Discogs, limit: int = 500, budget_minutes: float = 15
         row["id"]
         for row in conn.execute(
             """select m.id from master m
-               where exists (select 1 from offer o where o.master_id = m.id and o.in_stock)
+               where m.fetched_at < now() - interval '7 days'
+                 and exists (select 1 from offer o where o.master_id = m.id and o.in_stock)
                order by m.fetched_at limit %s""",
             (limit,),
         )
