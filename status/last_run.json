@@ -1,0 +1,46 @@
+{
+  "started_at": "2026-09-25T09:39:49+00:00",
+  "scrape": [
+    {
+      "shop": "stoprobot",
+      "status": "ok",
+      "offers": 1763,
+      "changed": 1763,
+      "out_of_stock": 0,
+      "seconds": 63
+    },
+    {
+      "shop": "korobka",
+      "status": "ok",
+      "offers": 899,
+      "changed": 899,
+      "out_of_stock": 0,
+      "seconds": 8
+    },
+    {
+      "shop": "pult",
+      "status": "failed",
+      "offers": 0,
+      "changed": 0,
+      "out_of_stock": 0,
+      "error": "HTTPError('403 Client Error: Forbidden for url: https://www.pult.ru/product/vinilovye-plastinki-new/?PAGEN_1=1')",
+      "seconds": 1
+    }
+  ],
+  "match": {
+    "barcode": 160,
+    "text": 4,
+    "not_found": 2,
+    "deferred": 2496,
+    "api_calls": 286
+  },
+  "refresh": {
+    "refreshed": 136
+  },
+  "export": {
+    "albums": 136,
+    "offers": 164,
+    "catalog_pages": 45
+  },
+  "finished_at": "2026-09-25T09:48:29+00:00"
+}
