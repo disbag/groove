@@ -58,12 +58,15 @@ jobs:
 
       - name: Коммит статуса прогона
         if: always()
+        continue-on-error: true # сбой коммита статуса не должен блокировать публикацию сайта
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add status/ || true
-          git commit -m "status: $(date -u +%F)" || echo "нет изменений"
-          git push
+          git commit -m "status: $(date -u +%F)" || { echo "нет изменений"; exit 0; }
+          # за время прогона в main могли появиться новые коммиты
+          for attempt in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 10; done
+          exit 1
 
   deploy:
     needs: update
