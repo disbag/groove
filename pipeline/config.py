@@ -23,14 +23,14 @@ _load_dotenv()
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 DISCOGS_TOKEN = os.environ.get("DISCOGS_TOKEN", "")
-SITE_URL = os.environ.get("VINYL_SITE_URL", "https://disbag.github.io/vinyl/")
+SITE_URL = os.environ.get("GROOVE_SITE_URL", "https://disbag.github.io/groove/")
 USER_AGENT = os.environ.get(
-    "VINYL_USER_AGENT",
-    f"VinylPricesRU/0.1 (+{SITE_URL}; hobby price aggregator)",
+    "GROOVE_USER_AGENT",
+    f"GrooveBot/0.1 (+{SITE_URL}; hobby price aggregator)",
 )
 
 # Вежливость к магазинам: не чаще одного запроса в секунду на хост.
-SHOP_MIN_INTERVAL = float(os.environ.get("VINYL_SHOP_INTERVAL", "1.0"))
+SHOP_MIN_INTERVAL = float(os.environ.get("GROOVE_SHOP_INTERVAL", "1.0"))
 # Если позиций в прогоне меньше этой доли от прошлого успешного, прогон считается подозрительным.
 PARTIAL_RUN_RATIO = 0.7
 # Сколько прогонов подряд позиция может отсутствовать, прежде чем стать «нет в наличии».

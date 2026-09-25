@@ -1,7 +1,7 @@
 import { computed, reactive, watch } from 'vue'
 
 // Избранное без регистрации: список альбомов в localStorage этого браузера.
-const KEY = 'vinyl:favorites'
+const KEY = 'groove:favorites'
 
 function load() {
   try {

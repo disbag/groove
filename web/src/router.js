@@ -19,5 +19,5 @@ export const router = createRouter({
 
 // Страницы альбома и поиска ставят свой заголовок сами
 router.afterEach((to) => {
-  if (!['album', 'search'].includes(to.name)) document.title = 'Винил · цены'
+  if (!['album', 'search'].includes(to.name)) document.title = 'Groove — цены на винил'
 })

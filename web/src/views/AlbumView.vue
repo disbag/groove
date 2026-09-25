@@ -20,7 +20,7 @@ watch(
     coverFailed.value = false
     try {
       album.value = await getAlbum(id)
-      document.title = `${album.value.artist} — ${album.value.title} · Винил · цены`
+      document.title = `${album.value.artist} — ${album.value.title} · Groove`
     } catch {
       missing.value = true
     }

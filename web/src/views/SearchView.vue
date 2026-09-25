@@ -18,7 +18,7 @@ const results = computed(() => {
   return index.value.filter((row) => words.every((w) => row.key.includes(w))).slice(0, 200)
 })
 
-watch(q, (value) => (document.title = `«${value}» · Винил · цены`), { immediate: true })
+watch(q, (value) => (document.title = `«${value}» · Groove`), { immediate: true })
 </script>
 
 <template>

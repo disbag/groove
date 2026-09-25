@@ -19,7 +19,7 @@ onMounted(async () => {
 <template>
   <header class="site-header">
     <div class="container header-row">
-      <RouterLink to="/" class="logo" aria-label="На главную">
+      <RouterLink to="/" class="logo" aria-label="Groove — на главную">
         <svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true">
           <circle cx="32" cy="32" r="30" fill="currentColor" />
           <circle cx="32" cy="32" r="22" fill="none" stroke="var(--groove)" stroke-width="1.5" />
@@ -27,7 +27,7 @@ onMounted(async () => {
           <circle cx="32" cy="32" r="10" fill="var(--accent)" />
           <circle cx="32" cy="32" r="2.2" fill="currentColor" />
         </svg>
-        <span>Винил<span class="logo-muted"> · цены</span></span>
+        <span>Groove<span class="logo-muted"> · цены на винил</span></span>
       </RouterLink>
       <SearchBox class="header-search" />
       <nav class="header-nav">
