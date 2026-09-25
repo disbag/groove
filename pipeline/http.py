@@ -15,6 +15,7 @@ class PoliteSession:
         self.min_interval = min_interval
         self.timeout = timeout
         self._last: dict[str, float] = {}
+        self._intervals: dict[str, float] = {}  # свои паузы для отдельных сайтов (Crawl-delay из robots.txt)
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": config.USER_AGENT,
@@ -31,9 +32,14 @@ class PoliteSession:
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
 
+    def throttle(self, url: str, seconds: float) -> None:
+        """Задать паузу между запросами к хосту из url (не меньше общей)."""
+        self._intervals[urlparse(url).netloc] = max(seconds, self.min_interval)
+
     def get(self, url: str, **kwargs) -> requests.Response:
         host = urlparse(url).netloc
-        wait = self.min_interval - (time.monotonic() - self._last.get(host, 0.0))
+        interval = self._intervals.get(host, self.min_interval)
+        wait = interval - (time.monotonic() - self._last.get(host, 0.0))
         if wait > 0:
             time.sleep(wait)
         try:

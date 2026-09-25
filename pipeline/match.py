@@ -13,7 +13,7 @@ from difflib import SequenceMatcher
 from psycopg.types.json import Jsonb
 
 from .discogs import Discogs
-from .normalize import barcode_key, clean_barcode, clean_discogs_name, detect_color
+from .normalize import barcode_key, clean_barcode, clean_discogs_name, detect_color, title_key
 
 log = logging.getLogger(__name__)
 TEXT_MATCH_THRESHOLD = 0.82
@@ -35,6 +35,7 @@ def run(conn, discogs: Discogs, budget_minutes: float = 240, limit: int | None =
         else:
             no_barcode.append(row)
 
+    _backfill_title_keys(conn)
     stats = defaultdict(int)
     for key, offers in by_key.items():
         if time.monotonic() > deadline:
@@ -154,6 +155,11 @@ def _save_release_from_search(conn, discogs: Discogs, result: dict) -> None:
 # ---------- по названию ----------
 
 def _match_text(conn, discogs: Discogs, offer: dict, stats) -> None:
+    master_id = _local_master_by_text(conn, offer)
+    if master_id:
+        conn.execute("update offer set master_id = %s, match_status = 'text' where id = %s", (master_id, offer["id"]))
+        stats["text_local"] += 1
+        return
     query = _text_query(offer)
     # Ищем среди виниловых изданий: фильтр format=Vinyl у поиска по master теряет альбомы,
     # у которых главное издание — CD.
@@ -174,6 +180,28 @@ def _match_text(conn, discogs: Discogs, offer: dict, stats) -> None:
         (best["id"], master_id, offer["id"]),
     )
     stats["text"] += 1
+
+
+def _local_master_by_text(conn, offer: dict) -> int | None:
+    """Альбом с тем же названием уже есть в базе и исполнитель похож — берём его без запроса к Discogs."""
+    key = title_key(offer.get("album_hint"))
+    if len(key) < 2:
+        return None
+    rows = conn.execute("select id, artist_display from master where title_key = %s", (key,)).fetchall()
+    artist = (offer.get("artist_hint") or "").strip()
+    if not rows:
+        return None
+    if not artist or artist.lower() in _COMPILATION_ARTISTS:
+        return rows[0]["id"] if len(rows) == 1 and rows[0]["artist_display"].lower() in ("various", "various artists") else None
+    best = max(rows, key=lambda r: _similarity(artist, r["artist_display"]))
+    return best["id"] if _similarity(artist, best["artist_display"]) >= 0.85 else None
+
+
+def _backfill_title_keys(conn) -> None:
+    rows = conn.execute("select id, title from master where title_key is null").fetchall()
+    if rows:
+        with conn.cursor() as cur:
+            cur.executemany("update master set title_key = %s where id = %s", [(title_key(r["title"]), r["id"]) for r in rows])
 
 
 _COMPILATION_ARTISTS = {"ost", "v/a", "va", "сборник", "various", "various artists", "саундтрек"}
@@ -285,6 +313,7 @@ def master_values(master_id: int, data: dict) -> dict:
         "cover_thumb": primary.get("uri150") or None,
         "tracklist": tracklist,
         "discogs_uri": uri if uri.startswith("http") else (f"https://www.discogs.com{uri}" if uri else None),
+        "title_key": title_key(data.get("title")),
     }
 
 
@@ -292,11 +321,13 @@ def _upsert_master(conn, master_id: int, data: dict) -> None:
     values = master_values(master_id, data)
     values["tracklist"] = Jsonb(values["tracklist"])
     conn.execute(
-        """insert into master (id, title, artist_display, year, genres, styles, cover_url, cover_thumb, tracklist, discogs_uri)
+        """insert into master (id, title, artist_display, year, genres, styles, cover_url, cover_thumb, tracklist,
+                               discogs_uri, title_key)
            values (%(id)s, %(title)s, %(artist_display)s, %(year)s, %(genres)s, %(styles)s,
-                   %(cover_url)s, %(cover_thumb)s, %(tracklist)s, %(discogs_uri)s)
+                   %(cover_url)s, %(cover_thumb)s, %(tracklist)s, %(discogs_uri)s, %(title_key)s)
            on conflict (id) do update set
-             title = excluded.title, artist_display = excluded.artist_display, year = excluded.year,
+             title = excluded.title, title_key = excluded.title_key, artist_display = excluded.artist_display,
+             year = excluded.year,
              genres = excluded.genres, styles = excluded.styles, cover_url = excluded.cover_url,
              cover_thumb = excluded.cover_thumb, tracklist = excluded.tracklist,
              discogs_uri = excluded.discogs_uri, fetched_at = now()""",

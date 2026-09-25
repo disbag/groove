@@ -64,6 +64,35 @@ def color_part_of_title(title: str) -> str | None:
     return None
 
 
+def edition_text(title: str) -> str | None:
+    """Описание издания без исполнителя и альбома: всё в скобках плюс хвост после последней скобки.
+
+    «Part 2: Life (2LP) Grey» → «2LP Grey». Ищем цвет только здесь: иначе Pink Floyd или
+    «Purple Rain» считались бы цветным винилом.
+    """
+    chunks = re.findall(r"\(([^()]*)\)", title)
+    tail = title.rsplit(")", 1)[1].strip() if ")" in title else ""
+    text = " ".join(chunks + ([tail] if tail else [])).strip()
+    return text or None
+
+
+def split_title(title: str) -> tuple[str | None, str | None]:
+    """«2Pac - Part 2: Life (2LP) Grey» → («2Pac», «Part 2: Life»): альбом — до первой скобки."""
+    title = unescape(title)
+    for sep in (" – ", " — ", " - "):
+        if sep in title:
+            artist, rest = title.split(sep, 1)
+            return artist.strip() or None, album_before_parentheses(rest)
+    return None, album_before_parentheses(title)
+
+
+def album_before_parentheses(text: str | None) -> str | None:
+    """«Part 2: Life (2LP) Grey» → «Part 2: Life»."""
+    if not text:
+        return None
+    return text.split("(", 1)[0].strip(" -–—") or None
+
+
 _QTY_PATTERNS = [
     re.compile(r"(\d+)\s*[x×х]\s*(?:vinyl|lp|винил)", re.I),
     re.compile(r"\b(\d+)\s*-?\s*lp\b", re.I),
@@ -116,3 +145,9 @@ def to_price(value) -> int | None:
         return int(round(float(str(value).replace(" ", "").replace(",", "."))))
     except ValueError:
         return None
+
+
+def title_key(text: str | None) -> str:
+    """Ключ для точного сравнения названий: без регистра, ё = е, только буквы и цифры."""
+    text = (text or "").lower().replace("ё", "е")
+    return re.sub(r"[\W_]+", "", text)

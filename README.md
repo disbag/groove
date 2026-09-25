@@ -16,11 +16,20 @@ Supabase (PostgreSQL) — хранилище конвейера; сайт к б�
 
 ## Магазины
 
-| Код | Магазин | Источник данных |
-|---|---|---|
-| `stoprobot` | stoprobot.ru | InSales JSON `/collection/vinilovye-plastinki.json` |
-| `korobka` | korobkavinyla.ru | Tilda Store API (раздел «Винил», только в наличии) |
-| `pult` | pult.ru | JSON `catalogListParams.products` в HTML листинга |
+| Код | Магазин | Источник данных | Штрихкод |
+|---|---|---|---|
+| `stoprobot` | stoprobot.ru | InSales JSON `/collection/vinilovye-plastinki.json` | ✅ |
+| `korobka` | korobkavinyla.ru | Tilda Store API (раздел «Винил», только в наличии) | ✅ |
+| `plstkwrld` | plstkwrld.com | Мегагрупп: папки-жанры, параметры в листинге | ✅ |
+| `vinylis` | vinyl-is.ru | Битрикс (Aspro): data-атрибуты карточки, `Crawl-delay: 2` | — |
+| `newartstore` | newartstore.ru | Битрикс: раздел «Новый винил» | — |
+| `vidika` | vidika.su | Webasyst: категории с пластинками в наличии | — |
+| `stereozona` | stereozona.ru | Битрикс: раздел пластинок | — |
+| `sferazvyka` | sferazvyka.ru | Мегагрупп: папка «Новый винил» | — |
+| `pult` | pult.ru | JSON в HTML листинга — **выключен**: 403 серверам GitHub, затем JS-проверка на бота | ✅ |
+
+Без штрихкода позиции сопоставляются по «исполнитель + альбом»: сначала с альбомами, уже известными базе
+(`master.title_key`), затем через поиск Discogs. Обходятся только листинги, карточки товаров не запрашиваются.
 
 Новый магазин — это модуль в `pipeline/adapters/` с `SHOP` и `fetch(http) -> list[Offer]`, добавленный в `ADAPTERS`.
 Магазин можно временно выключить в базе: `update shop set is_active = false where code = '...'`.

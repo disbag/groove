@@ -24,6 +24,9 @@ create table if not exists master (     -- карточка каталога (а
   fetched_at timestamptz not null default now()
 );
 
+alter table master add column if not exists title_key text;  -- normalize.title_key(title), для поиска по названию
+create index if not exists master_title_key_idx on master (title_key);
+
 create table if not exists release (    -- издание (прессинг)
   id integer primary key,               -- discogs release id
   master_id integer not null references master(id),
