@@ -1,85 +1,82 @@
 {
-  "started_at": "2026-09-25T10:15:12+00:00",
+  "started_at": "2026-09-26T05:15:12+00:00",
   "scrape": [
     {
       "shop": "stoprobot",
       "status": "ok",
-      "offers": 1763,
-      "changed": 0,
+      "offers": 1768,
+      "changed": 1,
       "out_of_stock": 0,
-      "seconds": 29
+      "seconds": 60
     },
     {
       "shop": "korobka",
       "status": "ok",
-      "offers": 899,
+      "offers": 894,
       "changed": 0,
-      "out_of_stock": 0,
-      "seconds": 9
+      "out_of_stock": 3,
+      "seconds": 13
     },
     {
       "shop": "vinylis",
-      "status": "failed",
-      "offers": 0,
+      "status": "ok",
+      "offers": 6951,
       "changed": 0,
       "out_of_stock": 0,
-      "error": "HTTPError('404 Client Error: Not Found for url: https://vinyl-is.ru/catalog/vinilovye_plastinki/?PAGEN_1=350')",
-      "seconds": 974
+      "seconds": 948
     },
     {
       "shop": "plstkwrld",
-      "status": "failed",
-      "offers": 0,
+      "status": "ok",
+      "offers": 3441,
       "changed": 0,
       "out_of_stock": 0,
-      "error": "HTTPError('404 Client Error: Not Found for url: https://plstkwrld.com/magazin/folder/black-death-metal/p/1')",
-      "seconds": 4
+      "seconds": 105
     },
     {
       "shop": "newartstore",
       "status": "ok",
-      "offers": 8913,
-      "changed": 8913,
+      "offers": 8902,
+      "changed": 13,
       "out_of_stock": 0,
-      "seconds": 515
+      "seconds": 264
     },
     {
       "shop": "vidika",
       "status": "ok",
       "offers": 1480,
-      "changed": 1480,
+      "changed": 2,
       "out_of_stock": 0,
-      "seconds": 127
+      "seconds": 125
     },
     {
       "shop": "stereozona",
       "status": "ok",
-      "offers": 874,
-      "changed": 874,
-      "out_of_stock": 0,
-      "seconds": 75
+      "offers": 868,
+      "changed": 0,
+      "out_of_stock": 1,
+      "seconds": 76
     },
     {
       "shop": "sferazvyka",
-      "status": "failed",
-      "offers": 0,
+      "status": "ok",
+      "offers": 1478,
       "changed": 0,
       "out_of_stock": 0,
-      "error": "HTTPError('404 Client Error: Not Found for url: https://sferazvyka.ru/shop/folder/novye/p/22')",
-      "seconds": 36
+      "seconds": 37
     }
   ],
   "match": {
-    "not_found": 972,
-    "text": 5186,
-    "text_local": 2116,
-    "api_calls": 11123
+    "text_local": 5,
+    "text": 4,
+    "not_found": 2,
+    "api_calls": 9
   },
   "refresh": {},
   "export": {
-    "albums": 8030,
-    "offers": 9906,
-    "catalog_pages": 1260
+    "albums": 12463,
+    "offers": 20867,
+    "catalog_pages": 1932
   },
-  "finished_at": "2026-09-25T14:03:06+00:00"
+  "finished_at": "2026-09-26T05:42:42+00:00"
 }
