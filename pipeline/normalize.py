@@ -83,8 +83,22 @@ def split_title(title: str) -> tuple[str | None, str | None]:
     for sep in (" – ", " — ", " - "):
         if sep in title:
             artist, rest = title.split(sep, 1)
-            return artist.strip() or None, album_before_parentheses(rest)
+            artist = _dedupe_artist(artist.strip())
+            # «Big John Patton - Big John Patton - Let 'em Roll»: исполнитель повторён в названии
+            for sep2 in (" – ", " — ", " - "):
+                if artist and rest.lower().startswith(artist.lower() + sep2):
+                    rest = rest[len(artist) + len(sep2):]
+            return artist or None, album_before_parentheses(rest)
     return None, album_before_parentheses(title)
+
+
+def _dedupe_artist(artist: str) -> str:
+    """«SEX PISTOLS: SEX PISTOLS» → «SEX PISTOLS»."""
+    if ": " in artist:
+        left, right = artist.split(": ", 1)
+        if left.strip().lower() == right.strip().lower():
+            return left.strip()
+    return artist
 
 
 def album_before_parentheses(text: str | None) -> str | None:
@@ -115,8 +129,13 @@ def detect_qty(text: str | None) -> int | None:
     return None
 
 
+_INVISIBLE = re.compile("[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]")
+
+
 def unescape(text: str | None) -> str:
-    return html.unescape(text or "").replace(" ", " ").strip()
+    """HTML-сущности, неразрывные пробелы и невидимые символы направления текста (U+200E и т. п.)."""
+    text = _INVISIBLE.sub("", html.unescape(text or "")).replace("\u00a0", " ")
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def strip_parentheses(text: str) -> str:

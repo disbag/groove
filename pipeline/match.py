@@ -8,20 +8,25 @@ import logging
 import re
 import time
 from collections import defaultdict
-from difflib import SequenceMatcher
-
 from psycopg.types.json import Jsonb
 
+from . import textmatch
 from .discogs import Discogs
-from .normalize import barcode_key, clean_barcode, clean_discogs_name, detect_color, fold, title_key
+from .normalize import barcode_key, clean_barcode, clean_discogs_name, detect_color, title_key
 
 log = logging.getLogger(__name__)
-TEXT_MATCH_THRESHOLD = 0.82
 MAX_RELEASES_PER_BARCODE = 10  # у популярных альбомов под одним штрихкодом бывают десятки репрессов
 
 
-def run(conn, discogs: Discogs, budget_minutes: float = 240, limit: int | None = None) -> dict:
+def run(conn, discogs: Discogs, budget_minutes: float = 240, limit: int | None = None,
+        retry_not_found: bool = False) -> dict:
     deadline = time.monotonic() + budget_minutes * 60
+    if retry_not_found:
+        # после улучшения алгоритма — ещё раз попробовать то, что раньше не нашлось
+        requeued = conn.execute(
+            "update offer set match_status = 'pending' where match_status = 'not_found' and in_stock"
+        ).rowcount
+        log.info("повторная проверка ненайденных: %d", requeued)
     rows = conn.execute(
         """select id, barcode, raw_title, artist_hint, album_hint, color, format_qty
            from offer where match_status = 'pending' and in_stock
@@ -155,64 +160,89 @@ def _save_release_from_search(conn, discogs: Discogs, result: dict) -> None:
 # ---------- по названию ----------
 
 def _match_text(conn, discogs: Discogs, offer: dict, stats) -> None:
-    master_id = _local_master_by_text(conn, offer)
+    artist, album = _hints(offer)
+    master_id = _local_master_by_text(conn, artist, album)
     if master_id:
         conn.execute("update offer set master_id = %s, match_status = 'text' where id = %s", (master_id, offer["id"]))
         stats["text_local"] += 1
         return
-    query = _text_query(offer)
-    # Ищем среди виниловых изданий: фильтр format=Vinyl у поиска по master теряет альбомы,
-    # у которых главное издание — CD.
-    results = discogs.search_vinyl_releases(query) if query else []
-    best, best_ratio = None, 0.0
-    for result in results[:10]:
-        ratio = _similarity(query, (result.get("title") or "").replace(" - ", " "))
-        if ratio > best_ratio:
-            best, best_ratio = result, ratio
-    if not best or best_ratio < TEXT_MATCH_THRESHOLD:
+    if not album:
         _set_status(conn, offer["id"], "not_found")
         stats["not_found"] += 1
         return
-    _save_release_from_search(conn, discogs, best)
-    master_id = best.get("master_id") or -best["id"]
-    conn.execute(
-        "update offer set release_id = %s, master_id = %s, match_status = 'text' where id = %s",
-        (best["id"], master_id, offer["id"]),
-    )
-    stats["text"] += 1
+    # 1) среди виниловых изданий — так сразу известно конкретное издание
+    query = " ".join(x for x in (None if textmatch.is_compilation(artist) else artist, album) if x)
+    best = _best(artist, album, discogs.search_vinyl_releases(query))
+    if best:
+        _save_release_from_search(conn, discogs, best)
+        master_id = best.get("master_id") or -best["id"]
+        conn.execute(
+            "update offer set release_id = %s, master_id = %s, match_status = 'text' where id = %s",
+            (best["id"], master_id, offer["id"]),
+        )
+        stats["text"] += 1
+        return
+    # 2) альбом по полям без фильтра формата: винил мог ещё не попасть в Discogs, а карточка у нас — альбом
+    best = _best(artist, album, discogs.search_master_fields(
+        None if textmatch.is_compilation(artist) else artist, album))
+    if best:
+        _ensure_master(conn, discogs, best["id"], None)
+        conn.execute("update offer set master_id = %s, match_status = 'text' where id = %s", (best["id"], offer["id"]))
+        stats["text_master"] += 1
+        return
+    _set_status(conn, offer["id"], "not_found")
+    stats["not_found"] += 1
 
 
-def _local_master_by_text(conn, offer: dict) -> int | None:
-    """Альбом с тем же названием уже есть в базе и исполнитель похож — берём его без запроса к Discogs."""
-    key = title_key(offer.get("album_hint"))
+def _hints(offer: dict) -> tuple[str | None, str | None]:
+    artist = (offer.get("artist_hint") or "").strip() or None
+    album = (offer.get("album_hint") or "").strip() or None
+    if not album:
+        album = re.sub(r"\([^)]*\)|\|.*$", " ", offer.get("raw_title") or "").strip() or None
+    return artist, album
+
+
+def _best(artist: str | None, album: str, results: list[dict]) -> dict | None:
+    scored = [(textmatch.acceptable(artist, album, r.get("title") or ""), i, r) for i, r in enumerate(results[:10])]
+    scored = [s for s in scored if s[0] > 0]
+    # при равной оценке — порядок выдачи Discogs (релевантность)
+    return max(scored, key=lambda s: (s[0], -s[1]))[2] if scored else None
+
+
+def _local_master_by_text(conn, artist: str | None, album: str | None) -> int | None:
+    """Альбом уже есть в базе (по названию целиком или без приписок) и исполнитель подходит — без запроса к Discogs."""
+    key = title_key(album)
     if len(key) < 2:
         return None
-    rows = conn.execute("select id, artist_display from master where title_key = %s", (key,)).fetchall()
-    artist = (offer.get("artist_hint") or "").strip()
-    if not rows:
-        return None
-    if not artist or artist.lower() in _COMPILATION_ARTISTS:
-        return rows[0]["id"] if len(rows) == 1 and rows[0]["artist_display"].lower() in ("various", "various artists") else None
-    best = max(rows, key=lambda r: _similarity(artist, r["artist_display"]))
-    return best["id"] if _similarity(artist, best["artist_display"]) >= 0.85 else None
+    rows = conn.execute(
+        "select id, artist_display, title from master where title_key = %s or core_key = %s", (key, key)
+    ).fetchall()
+    scored = [(textmatch.acceptable(artist, album, f"{r['artist_display']} - {r['title']}"), r["id"]) for r in rows]
+    scored = [s for s in scored if s[0] > 0]
+    return max(scored)[1] if scored else None
 
 
 def _backfill_title_keys(conn) -> None:
-    """Заполняет и пересчитывает master.title_key (например, после изменения правил нормализации)."""
-    rows = conn.execute("select id, title, title_key from master").fetchall()
-    stale = [(title_key(r["title"]), r["id"]) for r in rows if r["title_key"] != title_key(r["title"])]
+    """Заполняет и пересчитывает master.title_key / core_key (например, после изменения правил нормализации)."""
+    rows = conn.execute("select id, title, title_key, core_key from master").fetchall()
+    stale = [
+        (title_key(r["title"]), _core_key(r["title"]), r["id"])
+        for r in rows
+        if (r["title_key"], r["core_key"]) != (title_key(r["title"]), _core_key(r["title"]))
+    ]
     if stale:
         with conn.cursor() as cur:
-            cur.executemany("update master set title_key = %s where id = %s", stale)
+            cur.executemany("update master set title_key = %s, core_key = %s where id = %s", stale)
 
 
-_COMPILATION_ARTISTS = {"ost", "v/a", "va", "сборник", "various", "various artists", "саундтрек"}
+def _core_key(title: str | None) -> str:
+    return title_key(textmatch.album_core(title or ""))
 
 
 def _text_query(offer: dict) -> str:
     artist = (offer["artist_hint"] or "").strip()
     album = (offer["album_hint"] or "").strip()
-    if artist.lower() in _COMPILATION_ARTISTS:
+    if textmatch.is_compilation(artist):
         artist = ""
     query = " ".join(x for x in (artist, album) if x) or offer["raw_title"]
     query = re.sub(r"\([^)]*\)|\|.*$", " ", query)
@@ -220,7 +250,7 @@ def _text_query(offer: dict) -> str:
 
 
 def _tokens(text: str) -> set[str]:
-    return set(re.findall(r"\w+", fold(text))) - _STOP_TOKENS
+    return set(textmatch.words(text)) - _STOP_TOKENS
 
 
 _STOP_TOKENS = {"the", "a", "lp", "vinyl", "and", "of", "black", "gram", "180", "edition", "limited", "coloured", "colored"}
@@ -233,11 +263,6 @@ def _album_coverage(offer: dict, release_title: str) -> float:
     if not wanted:
         return 1.0
     return len(wanted & _tokens(release_title)) / len(wanted)
-
-
-def _similarity(a: str, b: str) -> float:
-    norm = lambda s: " ".join(sorted(re.sub(r"[^\w\s]", " ", fold(s)).split()))  # noqa: E731
-    return SequenceMatcher(None, norm(a), norm(b)).ratio()
 
 
 # ---------- карточка альбома ----------
@@ -316,6 +341,7 @@ def master_values(master_id: int, data: dict) -> dict:
         "tracklist": tracklist,
         "discogs_uri": uri if uri.startswith("http") else (f"https://www.discogs.com{uri}" if uri else None),
         "title_key": title_key(data.get("title")),
+        "core_key": _core_key(data.get("title")),
     }
 
 
@@ -324,11 +350,12 @@ def _upsert_master(conn, master_id: int, data: dict) -> None:
     values["tracklist"] = Jsonb(values["tracklist"])
     conn.execute(
         """insert into master (id, title, artist_display, year, genres, styles, cover_url, cover_thumb, tracklist,
-                               discogs_uri, title_key)
+                               discogs_uri, title_key, core_key)
            values (%(id)s, %(title)s, %(artist_display)s, %(year)s, %(genres)s, %(styles)s,
-                   %(cover_url)s, %(cover_thumb)s, %(tracklist)s, %(discogs_uri)s, %(title_key)s)
+                   %(cover_url)s, %(cover_thumb)s, %(tracklist)s, %(discogs_uri)s, %(title_key)s, %(core_key)s)
            on conflict (id) do update set
-             title = excluded.title, title_key = excluded.title_key, artist_display = excluded.artist_display,
+             title = excluded.title, title_key = excluded.title_key, core_key = excluded.core_key,
+             artist_display = excluded.artist_display,
              year = excluded.year,
              genres = excluded.genres, styles = excluded.styles, cover_url = excluded.cover_url,
              cover_thumb = excluded.cover_thumb, tracklist = excluded.tracklist,

@@ -8,6 +8,10 @@ on:
       budget_minutes:
         description: "Лимит времени на сопоставление с Discogs, минут"
         default: "240"
+      retry_not_found:
+        description: "Заново проверить ненайденные позиции (после улучшения сопоставления)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write # коммит status/last_run.json (без активности GitHub через 60 дней выключает cron)
@@ -37,7 +41,7 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Сбор цен, сопоставление, экспорт
-        run: python -m pipeline nightly --budget-minutes "${{ inputs.budget_minutes || '240' }}"
+        run: python -m pipeline nightly --budget-minutes "${{ inputs.budget_minutes || '240' }}" ${{ inputs.retry_not_found && '--retry-not-found' || '' }}
 
       - uses: actions/setup-node@v7
         with:

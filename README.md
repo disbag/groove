@@ -28,8 +28,13 @@ Supabase (PostgreSQL) — хранилище конвейера; сайт к б�
 | `sferazvyka` | sferazvyka.ru | Мегагрупп: папка «Новый винил» | — |
 | `pult` | pult.ru | JSON в HTML листинга — **выключен**: 403 серверам GitHub, затем JS-проверка на бота | ✅ |
 
-Без штрихкода позиции сопоставляются по «исполнитель + альбом»: сначала с альбомами, уже известными базе
-(`master.title_key`), затем через поиск Discogs. Обходятся только листинги, карточки товаров не запрашиваются.
+Без штрихкода позиции сопоставляются по «исполнитель + альбом» (`pipeline/textmatch.py`): исполнитель и альбом
+сравниваются отдельно — «Prince» входит в «Prince And The Revolution», приписки вроде «(Original Motion Picture
+Soundtrack)» и «= Slovo» не мешают, а лишние слова и номера томов («Kid A Mnesia», «Greatest Hits Vol. 2») — мешают.
+Порядок: альбомы, уже известные базе (`master.title_key`, `master.core_key`) → виниловые издания в поиске Discogs →
+поиск альбома по полям без фильтра формата. Обходятся только листинги, карточки товаров не запрашиваются.
+После улучшения алгоритма ненайденное можно перепроверить: `python -m pipeline match --retry-not-found`
+или запуск Nightly update с галочкой `retry_not_found`.
 
 Новый магазин — это модуль в `pipeline/adapters/` с `SHOP` и `fetch(http) -> list[Offer]`, добавленный в `ADAPTERS`.
 Магазин можно временно выключить в базе: `update shop set is_active = false where code = '...'`.

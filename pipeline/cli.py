@@ -20,6 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     p_match = sub.add_parser("match", help="сопоставить новые позиции с Discogs")
     p_match.add_argument("--budget-minutes", type=float, default=240)
     p_match.add_argument("--limit", type=int)
+    p_match.add_argument("--retry-not-found", action="store_true", help="заново проверить ненайденные позиции")
     p_refresh = sub.add_parser("refresh", help="обновить данные альбомов (ссылки на обложки) по кругу")
     p_refresh.add_argument("--limit", type=int, default=500)
     p_refresh.add_argument("--budget-minutes", type=float, default=15)
@@ -28,6 +29,7 @@ def main(argv: list[str] | None = None) -> int:
     p_nightly = sub.add_parser("nightly", help="migrate → scrape → match → refresh → export → status")
     p_nightly.add_argument("--budget-minutes", type=float, default=240)
     p_nightly.add_argument("--out", type=Path, default=config.DEFAULT_EXPORT_DIR)
+    p_nightly.add_argument("--retry-not-found", action="store_true", help="заново проверить ненайденные позиции")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -38,7 +40,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "scrape":
         scrape.run(conn, args.shops.split(",") if args.shops else None)
     elif args.command == "match":
-        match.run(conn, Discogs(), args.budget_minutes, args.limit)
+        match.run(conn, Discogs(), args.budget_minutes, args.limit, args.retry_not_found)
     elif args.command == "refresh":
         match.refresh(conn, Discogs(), args.limit, args.budget_minutes)
     elif args.command == "export":
@@ -53,7 +55,7 @@ def _nightly(conn, args) -> int:
     db.migrate(conn)
     status["scrape"] = scrape.run(conn)
     discogs = Discogs()  # один клиент на прогон — общий учёт лимита запросов
-    status["match"] = match.run(conn, discogs, args.budget_minutes)
+    status["match"] = match.run(conn, discogs, args.budget_minutes, retry_not_found=args.retry_not_found)
     status["refresh"] = match.refresh(conn, discogs, limit=500, budget_minutes=15)
     status["export"] = export.run(conn, args.out)
     status["finished_at"] = _now()

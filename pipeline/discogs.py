@@ -58,6 +58,14 @@ class Discogs:
         data = self._get("/database/search", {"q": query, "type": "release", "format": "Vinyl", "per_page": 25})
         return (data or {}).get("results", [])
 
+    def search_master_fields(self, artist: str | None, album: str) -> list[dict]:
+        """Поиск альбома по отдельным полям, без фильтра формата: винил мог ещё не попасть в Discogs."""
+        params = {"type": "master", "release_title": album, "per_page": 10}
+        if artist:
+            params["artist"] = artist
+        data = self._get("/database/search", params)
+        return (data or {}).get("results", [])
+
     def master(self, master_id: int) -> dict | None:
         return self._get(f"/masters/{master_id}")
 

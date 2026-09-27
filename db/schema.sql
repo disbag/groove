@@ -26,6 +26,8 @@ create table if not exists master (     -- карточка каталога (а
 
 alter table master add column if not exists title_key text;  -- normalize.title_key(title), для поиска по названию
 create index if not exists master_title_key_idx on master (title_key);
+alter table master add column if not exists core_key text;   -- title_key без приписок: «Black Swan (OST)» → blackswan
+create index if not exists master_core_key_idx on master (core_key);
 
 create table if not exists release (    -- издание (прессинг)
   id integer primary key,               -- discogs release id

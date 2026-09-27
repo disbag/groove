@@ -14,6 +14,8 @@ from . import _html
 SHOP = Shop(code="vidika", name="Видика", base_url="https://vidika.su", adapter="webasyst_html")
 CATEGORIES = ["/category/zarubezhnyy-vinil/", "/category/russkiy-vinil/"]
 TITLE_PREFIX = re.compile(r"^виниловая пластинка\s+", re.I)
+# «США Eminem - Stans»: страна издания перед исполнителем
+COUNTRY_PREFIX = re.compile(r"^(США|UK|EU|Европа|Япония|Japan|Германия|Germany)\s+", re.I)
 
 
 def fetch(http: PoliteSession) -> list[Offer]:
@@ -42,7 +44,7 @@ def parse_listing(html: str) -> list[Offer]:
         img = card.select_one("img[alt]")
         if not link or not pid or not img:
             continue
-        title = TITLE_PREFIX.sub("", img["alt"]).strip()
+        title = COUNTRY_PREFIX.sub("", TITLE_PREFIX.sub("", img["alt"]).strip())
         card_text = _html.text(card)
         match = re.search(r"Исполнитель:\s*(.+?)\s+(?:В наличии|Под заказ|Нет в наличии|Предзаказ|Артикул)", card_text)
         artist_hint = match.group(1).strip() if match else None
