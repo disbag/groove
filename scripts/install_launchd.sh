@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Ставит ежедневный запуск scripts/local_run.sh через launchd (по умолчанию в 02:30 — до ночного прогона на GitHub).
+# Ставит ежедневный запуск scripts/local_run.sh через launchd (по умолчанию в 23:30 — до ночного прогона на GitHub).
 # Если Mac в это время спит, launchd запустит задачу после пробуждения. Удалить: scripts/install_launchd.sh --remove
 set -euo pipefail
 APP="${0:A:h:h}"
@@ -20,7 +20,7 @@ cat > "$PLIST" <<PLIST
   <key>ProgramArguments</key>
   <array><string>/bin/zsh</string><string>$APP/scripts/local_run.sh</string></array>
   <key>StartCalendarInterval</key>
-  <dict><key>Hour</key><integer>${GROOVE_HOUR:-2}</integer><key>Minute</key><integer>${GROOVE_MINUTE:-30}</integer></dict>
+  <dict><key>Hour</key><integer>${GROOVE_HOUR:-23}</integer><key>Minute</key><integer>${GROOVE_MINUTE:-30}</integer></dict>
   <key>StandardOutPath</key><string>$HOME/Library/Logs/groove-local.launchd.log</string>
   <key>StandardErrorPath</key><string>$HOME/Library/Logs/groove-local.launchd.log</string>
 </dict>

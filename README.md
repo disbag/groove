@@ -5,7 +5,7 @@
 Каждую ночь конвейер собирает цены, сопоставляет позиции с Discogs по штрихкоду и публикует статический сайт.
 
 ```
-GitHub Actions (cron 03:30 МСК)
+GitHub Actions (cron 00:17 МСК; GitHub может задержать запуск на несколько часов)
   └─ python -m pipeline nightly
        ├─ scrape  — адаптеры магазинов → таблица offer (только текущее состояние)
        ├─ match   — Discogs API: штрихкод → издание → альбом (master)
@@ -60,7 +60,7 @@ Soundtrack)» и «= Slovo» не мешают, а лишние слова и н
 read -rs "DB?Supabase Session pooler URL: " && printf 'DATABASE_URL=%s\n' "$DB" > .env.production \
   && grep '^DISCOGS_TOKEN=' .env >> .env.production && chmod 600 .env.production
 scripts/local_run.sh              # сбор Пульта + сопоставление; лог: ~/Library/Logs/groove-local.log
-scripts/install_launchd.sh        # ежедневно в 02:30, до ночного прогона на GitHub; --remove — удалить
+scripts/install_launchd.sh        # ежедневно в 23:30, до ночного прогона на GitHub; --remove — удалить
 .venv/bin/python scripts/copy_catalog.py --source .env --target .env.production   # перенести найденное локально
 ```
 

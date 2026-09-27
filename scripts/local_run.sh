@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Локальный сбор магазинов, которые не пускают серверы GitHub (сейчас — Пульт), в боевую базу Supabase.
-# Подключение берётся из app/.env.production. Ночной прогон на GitHub (03:30 МСК) потом выгрузит данные на сайт.
+# Подключение берётся из app/.env.production. Ночной прогон на GitHub (00:17 МСК) потом выгрузит данные на сайт.
 set -euo pipefail
 cd "${0:A:h}/.."
 export GROOVE_ENV_FILE=.env.production
