@@ -1,84 +1,83 @@
 {
-  "started_at": "2026-09-27T07:32:00+00:00",
+  "started_at": "2026-09-27T23:49:51+00:00",
   "scrape": [
     {
       "shop": "stoprobot",
-      "status": "ok",
-      "offers": 1759,
+      "status": "failed",
+      "offers": 0,
       "changed": 0,
-      "out_of_stock": 10,
-      "seconds": 55
+      "out_of_stock": 0,
+      "error": "HTTPError('404 Client Error: Not Found for url: https://stoprobot.ru/collection/vinilovye-plastinki.json?page=1')",
+      "seconds": 1
     },
     {
       "shop": "korobka",
       "status": "ok",
-      "offers": 898,
-      "changed": 0,
-      "out_of_stock": 3,
-      "seconds": 9
+      "offers": 910,
+      "changed": 17,
+      "out_of_stock": 0,
+      "seconds": 8
     },
     {
       "shop": "vinylis",
       "status": "ok",
-      "offers": 6934,
+      "offers": 6903,
       "changed": 0,
-      "out_of_stock": 21,
-      "seconds": 836
+      "out_of_stock": 0,
+      "seconds": 920
     },
     {
       "shop": "plstkwrld",
       "status": "ok",
-      "offers": 3427,
+      "offers": 3419,
       "changed": 0,
-      "out_of_stock": 14,
-      "seconds": 104
+      "out_of_stock": 0,
+      "seconds": 101
     },
     {
       "shop": "newartstore",
       "status": "ok",
-      "offers": 8878,
-      "changed": 0,
-      "out_of_stock": 23,
-      "seconds": 463
+      "offers": 8879,
+      "changed": 13,
+      "out_of_stock": 0,
+      "seconds": 594
     },
     {
       "shop": "vidika",
       "status": "ok",
       "offers": 1480,
-      "changed": 0,
+      "changed": 8,
       "out_of_stock": 0,
-      "seconds": 127
+      "seconds": 123
     },
     {
       "shop": "stereozona",
       "status": "ok",
-      "offers": 866,
+      "offers": 860,
       "changed": 0,
-      "out_of_stock": 3,
-      "seconds": 62
+      "out_of_stock": 0,
+      "seconds": 88
     },
     {
       "shop": "sferazvyka",
       "status": "ok",
       "offers": 1475,
       "changed": 0,
-      "out_of_stock": 4,
+      "out_of_stock": 0,
       "seconds": 36
     }
   ],
   "match": {
-    "not_found": 980,
-    "text": 487,
-    "barcode": 3,
-    "text_local": 393,
-    "text_master": 86,
-    "api_calls": 3168
+    "barcode": 17,
+    "text_local": 7,
+    "text": 6,
+    "api_calls": 35
   },
   "refresh": {},
   "export": {
-    "albums": 12987,
-    "offers": 21744,
-    "catalog_pages": 2019
+    "albums": 13001,
+    "offers": 21769,
+    "catalog_pages": 2025
   },
-  "finished_at": "2026-09-27T08:56:05+00:00"
+  "finished_at": "2026-09-28T00:21:52+00:00"
 }
