@@ -177,3 +177,21 @@ def fold(text: str | None) -> str:
 def title_key(text: str | None) -> str:
     """Ключ для точного сравнения названий: без регистра и диакритики, только буквы и цифры."""
     return re.sub(r"[\W_]+", "", fold(text))
+
+
+_OTHER_MEDIA = re.compile(
+    r"аудиокассет|кассет|cassette|\bMC\b|компакт[- ]?диск|\bCD\b|\d\s*CD\b|\bDVD\b|blu[- ]?ray|\bSACD\b", re.I)
+_VINYL_MARKERS = re.compile(
+    r"\bLP\b|\d\s*LP\b|\d\s*x\s*LP|vinyl|винил|\bEP\b"
+    r"|(?<!\d)(7|10|12)\s*(\"|″|''|inch|дюйм|single)",  # 7", 6x7"Single, 12Single
+    re.I)
+
+
+def is_non_vinyl(raw_title: str | None, edition: str | None = None) -> bool:
+    """Кассета, CD, DVD без винила в описании издания: «БИ-2 — Аллилуйя (Аудиокассета)».
+
+    Смотрим только на описание издания (скобки и хвост названия + поле формата), а не на название альбома.
+    Комплекты «2LP+DVD» — это винил с бонусом, их оставляем.
+    """
+    text = " ".join(x for x in (edition_text(raw_title or ""), (edition or "")[:300]) if x)
+    return bool(_OTHER_MEDIA.search(text)) and not _VINYL_MARKERS.search(text)

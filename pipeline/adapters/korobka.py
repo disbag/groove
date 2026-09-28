@@ -64,7 +64,9 @@ def _parse(product: dict, used_part_ids: set[str]) -> Offer | None:
     editions = product.get("editions") or [{}]
     quantity = max(float(e.get("quantity") or 0) for e in editions)
     title = unescape(product.get("title"))
-    descr = unescape(re.sub(r"<br\s*/?>", "\n", product.get("descr") or "", flags=re.I))
+    # построчно: unescape схлопывает пробелы, а поле «Format:» должно кончаться на своей строке
+    lines = re.split(r"<br\s*/?>|\n", product.get("descr") or "", flags=re.I)
+    descr = "\n".join(unescape(line) for line in lines)
     fmt = _field(descr, "Format", "Формат") or ""
     color_raw = color_part_of_title(title) or fmt or None
     artist, album = split_artist_album(title)

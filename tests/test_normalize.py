@@ -86,3 +86,29 @@ def test_fold_and_title_key():
     assert fold("Мой Ёжик Йод") == "мой ежик йод"  # й сохраняется, ё → е
     assert title_key("Gling-Gló") == title_key("GLING GLO")
     assert title_key("Группа Крови") == "группакрови"
+
+
+def test_is_non_vinyl():
+    from pipeline.normalize import is_non_vinyl
+    assert is_non_vinyl("БИ-2 — Аллилуйя (Аудиокассета)", "Аудиокассета")
+    assert is_non_vinyl("Queen - Greatest Hits (CD)", "CD")
+    assert not is_non_vinyl("DEEP PURPLE – Bombay Calling (3LP+DVD)", "3LP+DVD")
+    assert not is_non_vinyl("Pink Floyd - Animals 2018 (LP + CD + Blu-ray + DVD) deluxe", "LP + CD + Blu-ray + DVD deluxe")
+    assert not is_non_vinyl("Radiohead – OK Computer OKNOTOK (Deluxe Box Set)", "3xVinyl, LP ... Compilation Cassette, Mixtape")
+    assert not is_non_vinyl("Grandmaster Flash – The Message (Cassette Culture Remix) (LP)", "LP")
+    assert not is_non_vinyl("КИНО — Звезда По Имени Солнце (LP)", "LP")
+    assert not is_non_vinyl("Антоха MC - The Best Collection", None)  # MC в имени исполнителя — не формат
+    assert not is_non_vinyl("LORNA SHORE — ...And I Return To Nothingness (12Single+CD)", "12Single+CD")
+    assert not is_non_vinyl('FRANZ FERDINAND – Tonight (2CD+DVD+6x7"Single, Box)', '2CD+DVD+6x7"Single, Box')
+    assert is_non_vinyl("K.D. LANG – Drag (2CD)", "2CD")
+
+
+def test_korobka_format_line_does_not_swallow_tracklist():
+    from pipeline.adapters.korobka import _parse
+    product = {
+        "uid": 1, "title": "Artist – Album", "price": "5490.0000", "sku": "0602445228997", "partuids": "[1]",
+        "descr": "Label: X – 1<br />Format: Vinyl, LP, Album, Red<br />Country: UK<br /><br />Tracklist:<br />A1 Black Ice",
+        "editions": [{"quantity": "1", "price": "5490.0000", "sku": "0602445228997", "img": "i.png"}],
+    }
+    offer = _parse(product, set())
+    assert offer.color_raw == "Vinyl, LP, Album, Red" and offer.color == "coloured"

@@ -14,6 +14,10 @@ on:
         description: "Заново проверить ненайденные позиции (после улучшения сопоставления)"
         type: boolean
         default: false
+      export_only:
+        description: "Только пересобрать сайт из базы, без сбора и сопоставления (несколько минут)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write # коммит status/last_run.json (без активности GitHub через 60 дней выключает cron)
@@ -43,7 +47,12 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Сбор цен, сопоставление, экспорт
-        run: python -m pipeline nightly --budget-minutes "${{ inputs.budget_minutes || '240' }}" ${{ inputs.retry_not_found && '--retry-not-found' || '' }}
+        run: |
+          if [ "${{ inputs.export_only }}" = "true" ]; then
+            python -m pipeline migrate && python -m pipeline export
+          else
+            python -m pipeline nightly --budget-minutes "${{ inputs.budget_minutes || '240' }}" ${{ inputs.retry_not_found && '--retry-not-found' || '' }}
+          fi
 
       - uses: actions/setup-node@v7
         with:

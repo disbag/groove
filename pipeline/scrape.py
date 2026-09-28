@@ -6,6 +6,7 @@ import time
 from . import config, db
 from .adapters import ADAPTERS
 from .http import PoliteSession
+from .normalize import is_non_vinyl
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +33,10 @@ def run(conn, shop_codes: list[str] | None = None) -> list[dict]:
         result = {"shop": code, "status": "failed", "offers": 0, "changed": 0, "out_of_stock": 0}
         try:
             offers = module.fetch(http)
+            skipped = [o for o in offers if is_non_vinyl(o.raw_title, o.color_raw)]
+            if skipped:
+                log.info("%s: пропущено не-винила (кассеты, CD, DVD): %d", code, len(skipped))
+                offers = [o for o in offers if not is_non_vinyl(o.raw_title, o.color_raw)]
             previous = db.previous_seen(conn, shop_id)
             suspicious = previous is not None and len(offers) < previous * config.PARTIAL_RUN_RATIO
             changed = db.upsert_offers(conn, shop_id, offers)
