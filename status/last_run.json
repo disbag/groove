@@ -1,85 +1,82 @@
 {
-  "started_at": "2026-10-03T00:32:20+00:00",
+  "started_at": "2026-10-03T23:47:41+00:00",
   "scrape": [
     {
       "shop": "stoprobot",
       "status": "ok",
-      "offers": 1766,
-      "changed": 5,
-      "out_of_stock": 5,
-      "seconds": 57
+      "offers": 1764,
+      "changed": 0,
+      "out_of_stock": 12,
+      "seconds": 64
     },
     {
       "shop": "korobka",
       "status": "ok",
-      "offers": 906,
-      "changed": 1,
-      "out_of_stock": 11,
-      "seconds": 9
+      "offers": 902,
+      "changed": 5,
+      "out_of_stock": 8,
+      "seconds": 8
     },
     {
       "shop": "vinylis",
       "status": "ok",
-      "offers": 6748,
-      "changed": 3,
-      "out_of_stock": 15,
-      "seconds": 942
+      "offers": 6713,
+      "changed": 0,
+      "out_of_stock": 26,
+      "seconds": 937
     },
     {
       "shop": "plstkwrld",
       "status": "ok",
-      "offers": 3392,
+      "offers": 3379,
       "changed": 0,
-      "out_of_stock": 6,
-      "seconds": 106
+      "out_of_stock": 5,
+      "seconds": 105
     },
     {
       "shop": "newartstore",
       "status": "ok",
       "offers": 8829,
-      "changed": 2,
-      "out_of_stock": 5,
-      "seconds": 261
+      "changed": 4,
+      "out_of_stock": 0,
+      "seconds": 470
     },
     {
       "shop": "vidika",
       "status": "ok",
       "offers": 1482,
-      "changed": 3,
+      "changed": 2,
       "out_of_stock": 0,
-      "seconds": 129
+      "seconds": 133
     },
     {
       "shop": "stereozona",
       "status": "ok",
-      "offers": 877,
-      "changed": 60,
-      "out_of_stock": 4,
-      "seconds": 86
+      "offers": 871,
+      "changed": 0,
+      "out_of_stock": 12,
+      "seconds": 90
     },
     {
       "shop": "sferazvyka",
       "status": "ok",
-      "offers": 1422,
+      "offers": 1421,
       "changed": 0,
-      "out_of_stock": 4,
+      "out_of_stock": 0,
       "seconds": 35
     }
   ],
   "match": {
-    "barcode": 6,
-    "not_found": 1,
-    "text": 5,
-    "text_local": 28,
-    "api_calls": 21
+    "barcode": 3,
+    "api_calls": 4
   },
   "refresh": {
     "refreshed": 500
   },
   "export": {
-    "albums": 12937,
-    "offers": 21555,
+    "albums": 12920,
+    "offers": 21491,
     "catalog_pages": 2007
   },
-  "finished_at": "2026-10-03T01:08:52+00:00"
+  "finished_at": "2026-10-04T00:27:27+00:00"
 }
