@@ -1,82 +1,83 @@
 {
-  "started_at": "2026-10-03T23:47:41+00:00",
+  "started_at": "2026-10-04T23:58:40+00:00",
   "scrape": [
     {
       "shop": "stoprobot",
       "status": "ok",
-      "offers": 1764,
+      "offers": 1760,
       "changed": 0,
-      "out_of_stock": 12,
-      "seconds": 64
+      "out_of_stock": 9,
+      "seconds": 36
     },
     {
       "shop": "korobka",
       "status": "ok",
-      "offers": 902,
-      "changed": 5,
+      "offers": 914,
+      "changed": 15,
       "out_of_stock": 8,
-      "seconds": 8
+      "seconds": 7
     },
     {
       "shop": "vinylis",
       "status": "ok",
-      "offers": 6713,
-      "changed": 0,
-      "out_of_stock": 26,
-      "seconds": 937
+      "offers": 6698,
+      "changed": 32,
+      "out_of_stock": 35,
+      "seconds": 935
     },
     {
       "shop": "plstkwrld",
       "status": "ok",
-      "offers": 3379,
+      "offers": 3362,
       "changed": 0,
-      "out_of_stock": 5,
+      "out_of_stock": 13,
       "seconds": 105
     },
     {
       "shop": "newartstore",
       "status": "ok",
       "offers": 8829,
-      "changed": 4,
+      "changed": 10,
       "out_of_stock": 0,
-      "seconds": 470
+      "seconds": 271
     },
     {
       "shop": "vidika",
       "status": "ok",
       "offers": 1482,
-      "changed": 2,
+      "changed": 4,
       "out_of_stock": 0,
-      "seconds": 133
+      "seconds": 136
     },
     {
       "shop": "stereozona",
       "status": "ok",
       "offers": 871,
-      "changed": 0,
-      "out_of_stock": 12,
-      "seconds": 90
+      "changed": 2,
+      "out_of_stock": 4,
+      "seconds": 94
     },
     {
       "shop": "sferazvyka",
       "status": "ok",
       "offers": 1421,
       "changed": 0,
-      "out_of_stock": 0,
-      "seconds": 35
+      "out_of_stock": 1,
+      "seconds": 36
     }
   ],
   "match": {
-    "barcode": 3,
-    "api_calls": 4
+    "barcode": 14,
+    "text_local": 2,
+    "api_calls": 17
   },
   "refresh": {
     "refreshed": 500
   },
   "export": {
-    "albums": 12920,
-    "offers": 21491,
-    "catalog_pages": 2007
+    "albums": 12906,
+    "offers": 21434,
+    "catalog_pages": 2004
   },
-  "finished_at": "2026-10-04T00:27:27+00:00"
+  "finished_at": "2026-10-05T00:35:00+00:00"
 }
