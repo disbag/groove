@@ -11,7 +11,6 @@ const router = useRouter()
 const cameFromSite = Boolean(window.history.state?.back)
 const album = ref(null)
 const missing = ref(false)
-const showTracks = ref(false)
 const coverFailed = ref(false)
 const cover = computed(() => (coverFailed.value ? album.value?.shop_image : album.value?.cover))
 
@@ -117,10 +116,8 @@ function edition(offer) {
         </ul>
 
         <template v-if="album.tracklist?.length">
-          <button class="link-button" @click="showTracks = !showTracks">
-            {{ showTracks ? 'Скрыть треклист' : `Треклист · ${album.tracklist.length}` }}
-          </button>
-          <ol v-if="showTracks" class="tracklist">
+          <h2 class="section-title">Треклист <span class="muted">· {{ album.tracklist.length }}</span></h2>
+          <ol class="tracklist">
             <li v-for="(t, i) in album.tracklist" :key="i">
               <span class="muted">{{ t.p }}</span> {{ t.t }} <span class="muted">{{ t.d }}</span>
             </li>
