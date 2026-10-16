@@ -279,6 +279,19 @@ def recheck_text(conn, apply: bool = False, samples: int = 60) -> dict:
     return {**stats, "applied": apply, "examples": examples}
 
 
+def _backfill_title_keys(conn) -> None:
+    """Заполняет и пересчитывает master.title_key / core_key (например, после изменения правил нормализации)."""
+    rows = conn.execute("select id, title, title_key, core_key from master").fetchall()
+    stale = [
+        (title_key(r["title"]), _core_key(r["title"]), r["id"])
+        for r in rows
+        if (r["title_key"], r["core_key"]) != (title_key(r["title"]), _core_key(r["title"]))
+    ]
+    if stale:
+        with conn.cursor() as cur:
+            cur.executemany("update master set title_key = %s, core_key = %s where id = %s", stale)
+
+
 def _core_key(title: str | None) -> str:
     return title_key(textmatch.album_core(title or ""))
 
