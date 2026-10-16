@@ -39,6 +39,8 @@ GENRE_SLUG = {name: slug for slug, name, _ in GENRES}
 
 def run(conn, out_dir: Path) -> dict:
     cards = conn.execute("select * from catalog_card").fetchall()
+    for card in cards:
+        card["artist_display"] = collapse_repeated_artist(card["artist_display"])
     offers = conn.execute(
         """select o.master_id, o.price, o.url, o.color, o.color_raw, o.format_qty, o.image_url,
                   s.code as shop, s.name as shop_name,
@@ -129,6 +131,19 @@ def run(conn, out_dir: Path) -> dict:
     }
     _write(out_dir / "meta.json", meta)
     return {"albums": len(cards), "offers": len(offers), "catalog_pages": pages, "artists": len(artists)}
+
+
+_ARTIST_PARTS = re.compile(r"\s+(?:=|/|&|\+|-)\s+|\s*,\s+|\s+/|/\s+")
+
+
+def collapse_repeated_artist(name: str) -> str:
+    """Подпись Discogs из одного и того же имени через разделитель — один исполнитель:
+    «Koto / Koto» → «Koto», «Tatsuro Yamashita = Tatsuro Yamashita» → «Tatsuro Yamashita».
+    Повтор без разделителя — настоящее имя: «Duran Duran», «Talk Talk», «Манго-Манго»."""
+    parts = [p for p in _ARTIST_PARTS.split(name or "") if p.strip()]
+    if len(parts) > 1 and len({title_key(p) for p in parts}) == 1:
+        return parts[0].strip()
+    return name
 
 
 def artist_slug(name: str) -> str:

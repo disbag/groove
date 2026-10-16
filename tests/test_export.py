@@ -1,4 +1,4 @@
-from pipeline.export import _artists, artist_letter, artist_slug
+from pipeline.export import _artists, artist_letter, artist_slug, collapse_repeated_artist
 
 
 def test_artist_slug():
@@ -35,3 +35,13 @@ def test_artists_groups_spellings_and_skips_compilations():
     assert [(a["slug"], a["name"], len(a["cards"]), a["min_price"]) for a in artists] == [
         ("ac-dc", "AC/DC", 3, 4000), ("кино", "Кино", 2, 3000)]
     assert [c["artist_slug"] for c in cards] == ["ac-dc", "ac-dc", "ac-dc", None, "кино", "кино"]
+
+
+def test_collapse_repeated_artist():
+    assert collapse_repeated_artist("Koto / Koto") == "Koto"
+    assert collapse_repeated_artist("Tatsuro Yamashita = Tatsuro Yamashita") == "Tatsuro Yamashita"
+    assert collapse_repeated_artist("Premiata Forneria Marconi, Premiata Forneria Marconi") == "Premiata Forneria Marconi"
+    assert collapse_repeated_artist("Лада Дэнс = Лада Дэнс") == "Лада Дэнс"
+    # настоящие имена и разные исполнители не трогаем
+    for name in ("Duran Duran", "Talk Talk", "The The", "Манго-Манго", "Lada Dance = Лада Дэнс", "Simon & Garfunkel", "AC/DC"):
+        assert collapse_repeated_artist(name) == name
