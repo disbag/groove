@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import AlbumCard from '../components/AlbumCard.vue'
+import { EAGER_CARDS } from '../format.js'
 import { getArtist } from '../api.js'
 import { plural } from '../format.js'
 
@@ -38,7 +39,7 @@ watch(
     <h1>{{ artist.name }}</h1>
     <p class="muted">{{ artist.albums.length }} {{ plural(artist.albums.length, 'альбом', 'альбома', 'альбомов') }} в наличии</p>
     <div class="grid">
-      <AlbumCard v-for="album in artist.albums" :key="album.id" :album="album" />
+      <AlbumCard v-for="(album, i) in artist.albums" :key="album.id" :album="album" :eager="i < EAGER_CARDS" />
     </div>
   </section>
   <p v-else class="muted">Загрузка…</p>

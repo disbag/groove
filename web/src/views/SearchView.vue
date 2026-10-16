@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AlbumCard from '../components/AlbumCard.vue'
+import { EAGER_CARDS } from '../format.js'
 import { getAlbum } from '../api.js'
 import { plural } from '../format.js'
 import { findAlbums, loadSearchIndex } from '../search.js'
@@ -73,7 +74,7 @@ watch(
       {{ results.length }} {{ plural(results.length, 'альбом', 'альбома', 'альбомов') }}
     </p>
     <div class="grid">
-      <AlbumCard v-for="album in visible" :key="album.id" :album="album" />
+      <AlbumCard v-for="(album, i) in visible" :key="album.id" :album="album" :eager="i < EAGER_CARDS" />
     </div>
     <div v-if="results.length" class="load-more">
       <p class="muted">Показано {{ visible.length }} из {{ results.length }}</p>

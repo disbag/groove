@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AlbumCard from '../components/AlbumCard.vue'
+import { EAGER_CARDS } from '../format.js'
 import { getCatalogPage } from '../api.js'
 import { plural, SORTS } from '../format.js'
 import { loadedPages } from '../catalogState.js'
@@ -117,7 +118,7 @@ const genres = computed(() => props.meta?.genres || [])
     <p v-if="error" class="notice">{{ error }}</p>
 
     <div class="grid">
-      <AlbumCard v-for="album in items" :key="album.id" :album="album" />
+      <AlbumCard v-for="(album, i) in items" :key="album.id" :album="album" :eager="i < EAGER_CARDS" />
     </div>
 
     <div class="load-more">

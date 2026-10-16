@@ -1,5 +1,8 @@
 const priceFormat = new Intl.NumberFormat('ru-RU')
 
+// Сколько первых карточек списка грузить сразу и с высоким приоритетом (примерно первый экран)
+export const EAGER_CARDS = 8
+
 export const formatPrice = (value) => (value == null ? '—' : `${priceFormat.format(value)} ₽`)
 
 export function plural(n, one, few, many) {

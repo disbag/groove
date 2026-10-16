@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import CoverImage from '../components/CoverImage.vue'
 import { getAlbum } from '../api.js'
 import { isFavorite, toggleFavorite } from '../favorites.js'
 import { COLOR_LABELS, formatPrice, plural, shopsLabel } from '../format.js'
@@ -11,15 +12,12 @@ const router = useRouter()
 const cameFromSite = Boolean(window.history.state?.back)
 const album = ref(null)
 const missing = ref(false)
-const coverFailed = ref(false)
-const cover = computed(() => (coverFailed.value ? album.value?.shop_image : album.value?.cover))
 
 watch(
   () => props.id,
   async (id) => {
     album.value = null
     missing.value = false
-    coverFailed.value = false
     try {
       const data = await getAlbum(id)
       if (id !== props.id) return // пока грузилось, перешли на другой альбом
@@ -39,7 +37,8 @@ const genreNames = computed(() => {
 const shopCount = computed(() => new Set((album.value?.offers || []).map((o) => o.shop)).size)
 const snapshot = computed(() =>
   album.value && {
-    id: album.value.id, a: album.value.artist, t: album.value.title, c: album.value.cover,
+    id: album.value.id, a: album.value.artist, t: album.value.title, c: album.value.thumb || album.value.cover,
+    cv: album.value.cover,
     s: album.value.shop_image, p: album.value.min_price,
   },
 )
@@ -61,14 +60,13 @@ function edition(offer) {
     <RouterLink v-else to="/" class="back muted">← Каталог</RouterLink>
     <div class="album-layout">
       <div class="album-cover">
-        <img
-          v-if="cover"
-          :src="cover"
+        <CoverImage
+          :full="album.cover"
+          :thumb="album.thumb"
+          :fallback="album.shop_image"
           :alt="`${album.artist} — ${album.title}`"
-          referrerpolicy="no-referrer"
-          @error="album.shop_image && (coverFailed = true)"
+          eager
         />
-        <div v-else class="cover-placeholder"></div>
       </div>
 
       <div class="album-info">
