@@ -132,6 +132,7 @@ def _card_json(card: dict, offers: list[dict], master: dict | None, now: str) ->
         "genres": card["genres"],
         "styles": card["styles"],
         "cover": card["cover"],
+        "thumb": card["thumb"],
         "shop_image": card["shop_image"],
         "discogs": card["discogs_uri"],
         "min_price": card["min_price"],

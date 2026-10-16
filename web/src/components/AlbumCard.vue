@@ -39,7 +39,7 @@ function onError() {
         <h3 class="album-title">{{ album.t }}</h3>
         <p class="album-price">
           <span class="price">от {{ formatPrice(album.p) }}</span>
-          <span class="muted">{{ shopsLabel(album.n) }}</span>
+          <span v-if="album.n" class="muted">{{ shopsLabel(album.n) }}</span>
         </p>
       </div>
     </RouterLink>
