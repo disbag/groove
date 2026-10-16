@@ -5,7 +5,20 @@ import CatalogView from './views/CatalogView.vue'
 export const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: '/', name: 'catalog', component: CatalogView },
+    {
+      path: '/',
+      name: 'catalog',
+      component: CatalogView,
+      // старые ссылки вида /?g=rock ведут на страницу жанра
+      beforeEnter: (to) => {
+        if (!to.query.g) return true
+        const { g, ...query } = to.query
+        return g === 'all' ? { path: '/', query } : { name: 'genre', params: { genre: g }, query }
+      },
+    },
+    { path: '/genre/:genre', name: 'genre', component: CatalogView },
+    { path: '/artists', name: 'artists', component: () => import('./views/ArtistsView.vue') },
+    { path: '/artist/:slug', name: 'artist', component: () => import('./views/ArtistView.vue'), props: true },
     { path: '/album/:id', name: 'album', component: () => import('./views/AlbumView.vue'), props: true },
     { path: '/search', name: 'search', component: () => import('./views/SearchView.vue') },
     { path: '/favorites', name: 'favorites', component: () => import('./views/FavoritesView.vue') },
@@ -13,11 +26,21 @@ export const router = createRouter({
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior(to, from, saved) {
-    return saved || { top: 0 }
+    if (!saved) return { top: 0 }
+    // Назад к списку: ждём, пока страница снова отрисует столько же, сколько было, и только потом прокручиваем
+    return new Promise((resolve) => {
+      const started = Date.now()
+      const tryScroll = () => {
+        const tallEnough = document.documentElement.scrollHeight >= saved.top + window.innerHeight
+        if (tallEnough || Date.now() - started > 1500) resolve(saved)
+        else requestAnimationFrame(tryScroll)
+      }
+      tryScroll()
+    })
   },
 })
 
-// Страницы альбома и поиска ставят свой заголовок сами
+// Страницы альбома, поиска, жанра и исполнителя ставят свой заголовок сами
 router.afterEach((to) => {
-  if (!['album', 'search'].includes(to.name)) document.title = 'Groove — цены на винил'
+  if (!['album', 'search', 'genre', 'artist', 'artists'].includes(to.name)) document.title = 'Groove — цены на винил'
 })

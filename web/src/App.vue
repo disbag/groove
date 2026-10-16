@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
+import GenreMenu from './components/GenreMenu.vue'
 import SearchBox from './components/SearchBox.vue'
 import { getMeta } from './api.js'
 import { favoritesCount } from './favorites.js'
@@ -31,6 +32,8 @@ onMounted(async () => {
       </RouterLink>
       <SearchBox class="header-search" />
       <nav class="header-nav">
+        <GenreMenu :genres="meta?.genres || []" />
+        <RouterLink to="/artists" class="nav-link">Исполнители</RouterLink>
         <RouterLink to="/favorites" class="nav-link">
           Избранное<span v-if="favoritesCount" class="badge">{{ favoritesCount }}</span>
         </RouterLink>

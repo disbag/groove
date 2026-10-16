@@ -1,16 +1,19 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AlbumCard from '../components/AlbumCard.vue'
 import { getCatalogPage } from '../api.js'
 import { plural, SORTS } from '../format.js'
+import { loadedPages } from '../catalogState.js'
 
 const props = defineProps({ meta: Object })
 const route = useRoute()
 const router = useRouter()
 
-const genre = computed(() => route.query.g || 'all')
+const genre = computed(() => route.params.genre || 'all')
 const sort = computed(() => (SORTS.some((s) => s.value === route.query.s) ? route.query.s : 'new'))
+const genreInfo = computed(() => (props.meta?.genres || []).find((g) => g.slug === genre.value))
+const sortQuery = computed(() => (sort.value === 'new' ? {} : { s: sort.value }))
 
 const items = ref([])
 const page = ref(0)
@@ -23,6 +26,19 @@ const error = ref('')
 let lastRequest = 0
 
 async function load(reset) {
+  const key = `${genre.value}|${sort.value}`
+  // Вернулись к списку (например, со страницы альбома) — показываем столько же страниц, сколько было
+  const saved = reset && loadedPages.get(key)
+  if (saved) {
+    lastRequest++
+    items.value = saved.items
+    page.value = saved.page
+    pages.value = saved.pages
+    total.value = saved.total
+    loading.value = false
+    error.value = ''
+    return
+  }
   const request = ++lastRequest
   loading.value = true
   error.value = ''
@@ -34,6 +50,7 @@ async function load(reset) {
     page.value = data.page
     pages.value = data.pages
     total.value = data.total
+    loadedPages.set(key, { items: items.value, page: page.value, pages: pages.value, total: total.value })
   } catch {
     if (request !== lastRequest) return
     error.value = 'Не удалось загрузить каталог. Попробуйте обновить страницу.'
@@ -45,10 +62,17 @@ async function load(reset) {
 
 watch([genre, sort], () => load(true), { immediate: true })
 
-function setQuery(patch) {
-  const query = { ...route.query, ...patch }
-  if (query.g === 'all') delete query.g
-  if (query.s === 'new') delete query.s
+watch(
+  genreInfo,
+  (g) => {
+    if (route.name === 'genre') document.title = g ? `${g.ru} — новый винил · Groove` : 'Groove — цены на винил'
+  },
+  { immediate: true },
+)
+
+function setSort(value) {
+  const query = { ...route.query, s: value }
+  if (value === 'new') delete query.s
   router.replace({ query })
 }
 
@@ -59,32 +83,35 @@ const genres = computed(() => props.meta?.genres || [])
   <section>
     <div class="catalog-head">
       <div>
-        <h1>Новый винил в наличии</h1>
-        <p v-if="meta" class="muted">
+        <h1>{{ genreInfo ? `${genreInfo.ru}: новый винил в наличии` : 'Новый винил в наличии' }}</h1>
+        <p v-if="meta && genre === 'all'" class="muted">
           {{ meta.albums }} {{ plural(meta.albums, 'альбом', 'альбома', 'альбомов') }} ·
           {{ meta.offers }} {{ plural(meta.offers, 'предложение', 'предложения', 'предложений') }} ·
           {{ meta.shops.length }} {{ plural(meta.shops.length, 'магазин', 'магазина', 'магазинов') }}
         </p>
+        <p v-else-if="total" class="muted">{{ total }} {{ plural(total, 'альбом', 'альбома', 'альбомов') }}</p>
       </div>
       <label class="sort">
         <span class="muted">Сортировка</span>
-        <select :value="sort" @change="setQuery({ s: $event.target.value })">
+        <select :value="sort" @change="setSort($event.target.value)">
           <option v-for="s in SORTS" :key="s.value" :value="s.value">{{ s.label }}</option>
         </select>
       </label>
     </div>
 
     <nav class="genres" aria-label="Жанры">
-      <button class="genre-chip" :class="{ active: genre === 'all' }" @click="setQuery({ g: 'all' })">Все</button>
-      <button
+      <RouterLink class="genre-chip" :class="{ active: genre === 'all' }" :to="{ path: '/', query: sortQuery }">
+        Все
+      </RouterLink>
+      <RouterLink
         v-for="g in genres"
         :key="g.slug"
         class="genre-chip"
         :class="{ active: genre === g.slug }"
-        @click="setQuery({ g: g.slug })"
+        :to="{ path: `/genre/${g.slug}`, query: sortQuery }"
       >
         {{ g.ru }} <span class="muted">{{ g.count }}</span>
-      </button>
+      </RouterLink>
     </nav>
 
     <p v-if="error" class="notice">{{ error }}</p>

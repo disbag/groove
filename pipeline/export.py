@@ -1,9 +1,14 @@
 """Выгрузка статических JSON для сайта: каталог постранично, карточки, поиск, метаданные."""
 
+import hashlib
 import json
+import re
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
+
+from .normalize import fold, title_key
+from .textmatch import is_compilation
 
 PAGE_SIZE = 48
 SORTS = {
@@ -73,6 +78,7 @@ def run(conn, out_dir: Path) -> dict:
         card["cover"] = card["cover_url"] or fallback
         card["shop_image"] = fallback if fallback != card["cover"] else None
 
+    artists = _artists(cards)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     for card in cards:
         _write(out_dir / "card" / f"{card['id']}.json", _card_json(card, by_master.get(card["id"], []),
@@ -96,6 +102,15 @@ def run(conn, out_dir: Path) -> dict:
                 })
                 pages += 1
 
+    for artist in artists:
+        _write(out_dir / "artist" / f"{artist['slug']}.json", {
+            "slug": artist["slug"], "name": artist["name"],
+            "albums": [_list_item(c) for c in sorted(artist["cards"], key=lambda c: (c["year"] or 9999, c["title"].lower()))],
+        })
+    _write(out_dir / "artists.json", [
+        [a["slug"], a["name"], len(a["cards"]), a["min_price"], artist_letter(a["name"])] for a in artists
+    ])
+
     _write(out_dir / "search.json", [
         [c["id"], f"{c['artist_display']} — {c['title']}", c["year"], c["min_price"]]
         for c in sorted(cards, key=SORTS["az"])
@@ -109,10 +124,65 @@ def run(conn, out_dir: Path) -> dict:
             {"slug": slug, "name": name, "ru": ru, "count": len(groups.get(slug, []))}
             for slug, name, ru in GENRES if groups.get(slug)
         ],
+        "artists": len(artists),
         "page_size": PAGE_SIZE,
     }
     _write(out_dir / "meta.json", meta)
-    return {"albums": len(cards), "offers": len(offers), "catalog_pages": pages}
+    return {"albums": len(cards), "offers": len(offers), "catalog_pages": pages, "artists": len(artists)}
+
+
+def artist_slug(name: str) -> str:
+    """Адрес страницы исполнителя: «Björk» → bjork, «AC/DC» → ac-dc, «Кино» → кино.
+
+    Длинные подписи (классика с оркестром и дирижёром) укорачиваем и добавляем хеш: имя файла
+    на Pages не должно быть длиннее 255 байт, а кириллица занимает по два байта на букву."""
+    slug = re.sub(r"[\W_]+", "-", fold(name)).strip("-")
+    if len(slug.encode()) > 120:
+        slug = slug[:50].rstrip("-") + "-" + hashlib.sha1(title_key(name).encode()).hexdigest()[:8]
+    return slug
+
+
+def _sort_name(name: str) -> str:
+    """Имя для сортировки: без «The» и знаков в начале — «'Baby Face' Willette» → baby face willette."""
+    return re.sub(r"^[\W_]+", "", fold(name)).removeprefix("the ").lstrip()
+
+
+def artist_letter(name: str) -> str:
+    """Буква в алфавитном указателе: «The Beatles» → B, «Björk» → B, «Кино» → К, «*NSYNC» → N, «2Pac» → #."""
+    match = re.search(r"[^\W_]", re.sub(r"^\W*the\s+", "", name, flags=re.I))
+    if not match or not match.group().isalpha():
+        return "#"
+    first = match.group()
+    folded = fold(first)[:1]
+    # латиницу с диакритикой — к основной букве; остальные алфавиты (кириллица, хангыль) — как есть
+    return (folded if folded.isascii() and folded.isalpha() else first).upper().replace("Ё", "Е")
+
+
+def _artists(cards: list[dict]) -> list[dict]:
+    """Исполнители каталога по подписи альбома. Одинаковые с точностью до регистра и знаков склеиваются,
+    сборники (Various) в список не входят. Каждой карточке проставляется artist_slug."""
+    groups: dict[str, dict] = {}
+    for card in cards:
+        name = card["artist_display"]
+        card["artist_slug"] = None
+        # «Кино = Кино», «Lada Dance = Лада Дэнс»: параллельное написание Discogs — тот же исполнитель
+        key = title_key(name.split(" = ", 1)[0])
+        if is_compilation(name) or not key:
+            continue
+        group = groups.setdefault(key, {"names": {}, "cards": []})
+        group["names"][name] = group["names"].get(name, 0) + 1
+        group["cards"].append(card)
+    artists = []
+    for group in groups.values():
+        # самое частое написание; при равенстве — короче, то есть без « = …»
+        name = max(group["names"], key=lambda n: (group["names"][n], -len(n), n))
+        slug = artist_slug(name)
+        for card in group["cards"]:
+            card["artist_slug"] = slug
+        artists.append({"slug": slug, "name": name, "cards": group["cards"],
+                        "min_price": min(c["min_price"] for c in group["cards"])})
+    # цифры и знаки — в начало, под «#»
+    return sorted(artists, key=lambda a: (artist_letter(a["name"]) != "#", _sort_name(a["name"]), a["slug"]))
 
 
 def _list_item(card: dict) -> dict:
@@ -127,6 +197,7 @@ def _card_json(card: dict, offers: list[dict], master: dict | None, now: str) ->
     return {
         "id": card["id"],
         "artist": card["artist_display"],
+        "artist_slug": card["artist_slug"],
         "title": card["title"],
         "year": card["year"],
         "genres": card["genres"],

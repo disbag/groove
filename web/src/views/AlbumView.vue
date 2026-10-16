@@ -1,11 +1,14 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { getAlbum } from '../api.js'
 import { isFavorite, toggleFavorite } from '../favorites.js'
 import { COLOR_LABELS, formatPrice, plural, shopsLabel } from '../format.js'
 
 const props = defineProps({ id: String, meta: Object })
+const router = useRouter()
+// Пришли со страницы сайта (каталог, жанр, исполнитель, поиск) — «назад» возвращает туда же, на то же место
+const cameFromSite = Boolean(window.history.state?.back)
 const album = ref(null)
 const missing = ref(false)
 const showTracks = ref(false)
@@ -55,7 +58,8 @@ function edition(offer) {
   </section>
 
   <section v-else-if="album" class="album-page">
-    <RouterLink to="/" class="back muted">← Каталог</RouterLink>
+    <a v-if="cameFromSite" href="#" class="back muted" @click.prevent="router.back()">← Назад</a>
+    <RouterLink v-else to="/" class="back muted">← Каталог</RouterLink>
     <div class="album-layout">
       <div class="album-cover">
         <img
@@ -69,7 +73,10 @@ function edition(offer) {
       </div>
 
       <div class="album-info">
-        <p class="album-artist big">{{ album.artist }}</p>
+        <p class="album-artist big">
+          <RouterLink v-if="album.artist_slug" :to="`/artist/${album.artist_slug}`" class="artist-link">{{ album.artist }}</RouterLink>
+          <template v-else>{{ album.artist }}</template>
+        </p>
         <h1 class="album-name">{{ album.title }}</h1>
         <p class="muted">
           <span v-if="album.year">{{ album.year }}</span>

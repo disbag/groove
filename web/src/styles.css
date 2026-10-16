@@ -55,6 +55,13 @@ h2 { font-size: 1.15rem; margin: 1.75rem 0 0.75rem; }
 .header-nav { display: flex; gap: 4px; margin-left: auto; }
 .nav-link { text-decoration: none; padding: 8px 12px; border-radius: 999px; white-space: nowrap; }
 .nav-link:hover, .nav-link.router-link-active { background: var(--line); }
+.nav-button { border: none; background: none; color: var(--text); font: inherit; cursor: pointer; }
+.caret { font-size: 0.75em; color: var(--muted); }
+/* панель жанров — во всю ширину под шапкой (шапка sticky и служит ей опорой) */
+.genre-panel { position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: var(--shadow); }
+.genre-panel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 16px; padding-top: 14px; padding-bottom: 16px; }
+.genre-panel-link { padding: 8px 10px; border-radius: 8px; text-decoration: none; }
+.genre-panel-link:hover, .genre-panel-link.router-link-exact-active { background: var(--line); }
 .badge { display: inline-block; min-width: 20px; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--accent-text); font-size: 0.75rem; text-align: center; line-height: 20px; }
 
 /* ---------- search ---------- */
@@ -84,6 +91,7 @@ h2 { font-size: 1.15rem; margin: 1.75rem 0 0.75rem; }
   flex: none; height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
   background: var(--surface); color: var(--text); font: inherit; font-size: 0.9rem; cursor: pointer;
 }
+.genre-chip { display: inline-flex; align-items: center; gap: 4px; text-decoration: none; }
 .genre-chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
 .genre-chip.active .muted { color: inherit; opacity: 0.7; }
 
@@ -168,6 +176,8 @@ h2 { font-size: 1.15rem; margin: 1.75rem 0 0.75rem; }
   .header-row { flex-wrap: wrap; height: auto; padding: 10px 16px; gap: 10px; }
   .header-search { order: 3; flex-basis: 100%; max-width: none; }
   .logo-muted { display: none; }
+  .header-nav { order: 4; flex-basis: 100%; margin-left: 0; overflow-x: auto; scrollbar-width: none; }
+  .genre-panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 60vh; overflow-y: auto; }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .album-name { font-size: 1.5rem; }
   .offer { grid-template-columns: 1fr; gap: 8px; }
@@ -175,3 +185,19 @@ h2 { font-size: 1.15rem; margin: 1.75rem 0 0.75rem; }
   .offer-buy { justify-content: space-between; }
   .tracklist { columns: 1; }
 }
+
+/* ---------- artists ---------- */
+.artists-tools { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 12px 0 20px; }
+.artists-filter { width: min(100%, 360px); height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; }
+.letters { display: flex; flex-wrap: wrap; gap: 4px; }
+.letters a { min-width: 28px; padding: 4px 6px; border-radius: 6px; text-align: center; text-decoration: none; font-weight: 600; }
+.letters a:hover { background: var(--line); }
+.letter-group { margin-bottom: 20px; scroll-margin-top: 88px; }
+.letter-group h2 { margin: 0 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.artist-list { list-style: none; margin: 0; padding: 0; columns: 4 220px; column-gap: 24px; }
+.artist-list li { break-inside: avoid; padding: 3px 0; }
+.artist-list a { text-decoration: none; }
+.artist-count { margin-left: 6px; font-size: 0.85rem; }
+.artist-list a:hover { color: var(--accent); }
+.artist-link { text-decoration: none; }
+.artist-link:hover { color: var(--accent); }
