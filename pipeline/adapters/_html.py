@@ -17,12 +17,14 @@ def text(el) -> str:
     return re.sub(r"\s+", " ", el.get_text(" ", strip=True)).strip() if el else ""
 
 
+_PRICE = re.compile(r"\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d+")
+
+
 def price(value: str | None) -> int | None:
-    """«4 100 руб.», «3 990 ₽», «4900» → целое число рублей."""
-    if not value:
-        return None
-    digits = re.sub(r"[^\d]", "", value.split(",")[0])
-    return int(digits) if digits else None
+    """«4 100 руб.», «3 990 ₽», «4900», «3300.00» → целое число рублей. Берём первое число в строке:
+    склеивать все цифры нельзя — «3300.00» стало бы 330000, а «4 990 ₽ 3 990 ₽» — 49903990."""
+    match = _PRICE.search(value or "")
+    return int(re.sub(r"\D", "", match.group())) if match else None
 
 
 def absolute(base: str, url: str | None) -> str | None:
@@ -42,7 +44,7 @@ def get_page(http, url: str, params: dict | None = None, first: bool = False) ->
     """HTML страницы листинга или None, если её нет. Многие магазины за последней страницей отвечают 404 —
     это конец каталога, а не ошибка. На первой странице 404 — ошибка (сменился адрес раздела)."""
     try:
-        return http.get(url, params=params).text if params is not None else http.get(url).text
+        return http.get(url, params=params).text
     except requests.HTTPError as exc:
         if not first and exc.response is not None and exc.response.status_code == 404:
             return None

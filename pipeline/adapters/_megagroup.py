@@ -18,17 +18,23 @@ NON_VINYL_FORMAT = re.compile(r"\b(CD|Cassette|Кассета|DVD|Blu-?ray)\b", 
 
 
 def fetch_folder(http: PoliteSession, base_url: str, folder: str, into: dict[str, Offer]) -> None:
-    """Обходит страницы папки и добавляет новые позиции в into (по product_id)."""
+    """Обходит страницы папки и добавляет новые позиции в into (по product_id).
+
+    Конец папки определяем по её собственным позициям: в жанровых папках plstkwrld одни и те же пластинки
+    лежат в нескольких папках, и страница, целиком уже встреченная в другой папке, — ещё не конец.
+    """
+    seen: set[str] = set()
     for page in range(0, 500):
         url = f"{base_url}{folder}" + (f"/p/{page}" if page else "")
         html = _html.get_page(http, url, first=page == 0)
         if html is None:
             break  # у папки меньше страниц: /p/N отвечает 404
-        batch = parse_listing(html, base_url)
-        fresh = [o for o in batch if o.external_id not in into]
-        if not batch or (page and not fresh and all(o.external_id in into for o in batch)):
-            break
-        into.update((o.external_id, o) for o in fresh)
+        fresh = [o for o in parse_listing(html, base_url) if o.external_id not in seen]
+        if not fresh:
+            break  # пустая страница или повтор последней
+        seen.update(o.external_id for o in fresh)
+        for offer in fresh:
+            into.setdefault(offer.external_id, offer)
 
 
 def parse_listing(html: str, base_url: str) -> list[Offer]:

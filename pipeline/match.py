@@ -86,7 +86,6 @@ def _match_barcode(conn, discogs: Discogs, key: str, offers: list[dict], stats) 
         if from_search:
             # В базу пишем только выбранное издание: так на штрихкод уходит 1–2 запроса к API, а не 10
             _save_release_from_search(conn, discogs, best["result"])
-            best["master_id"] = best["result"].get("master_id") or -best["id"]
         conn.execute(
             "update offer set release_id = %s, master_id = %s, match_status = 'barcode' where id = %s",
             (best["id"], best["master_id"], offer["id"]),
@@ -217,36 +216,71 @@ def _local_master_by_text(conn, artist: str | None, album: str | None) -> int | 
     rows = conn.execute(
         "select id, artist_display, title from master where title_key = %s or core_key = %s", (key, key)
     ).fetchall()
-    scored = [(textmatch.acceptable(artist, album, f"{r['artist_display']} - {r['title']}"), r["id"]) for r in rows]
-    scored = [s for s in scored if s[0] > 0]
-    return max(scored)[1] if scored else None
+    best = _best_local(artist, album, rows)
+    return best[1] if best else None
 
 
-def _backfill_title_keys(conn) -> None:
-    """Заполняет и пересчитывает master.title_key / core_key (например, после изменения правил нормализации)."""
-    rows = conn.execute("select id, title, title_key, core_key from master").fetchall()
-    stale = [
-        (title_key(r["title"]), _core_key(r["title"]), r["id"])
-        for r in rows
-        if (r["title_key"], r["core_key"]) != (title_key(r["title"]), _core_key(r["title"]))
-    ]
-    if stale:
+def _best_local(artist: str | None, album: str | None, rows) -> tuple[float, int] | None:
+    """Лучший альбом из базы: (оценка, id). При равной оценке — настоящий master и меньший id (обычно оригинал)."""
+    scored = [(textmatch.acceptable_parts(artist, album, r["artist_display"], r["title"]), r["id"]) for r in rows]
+    return max((s for s in scored if s[0] > 0), key=lambda s: (s[0], s[1] > 0, -abs(s[1])), default=None)
+
+
+def recheck_text(conn, apply: bool = False, samples: int = 60) -> dict:
+    """Перепроверяет текстовые сопоставления после изменения правил.
+
+    Если в базе есть альбом, который подходит лучше, позиция переносится на него. Если позиция привязана
+    к другому исполнителю с похожим именем («Little Big» → «Little Big Town»), она снова становится pending
+    и найдётся заново при следующем сопоставлении. Без apply только считает и показывает примеры.
+    """
+    masters = conn.execute("select id, artist_display, title, title_key, core_key from master").fetchall()
+    by_key: dict[str, list[dict]] = defaultdict(list)
+    for m in masters:
+        for key in {m["title_key"], m["core_key"]}:
+            if key:
+                by_key[key].append(m)
+    rows = conn.execute(
+        """select o.id, o.artist_hint, o.album_hint, o.raw_title, o.master_id,
+                  m.artist_display, m.title, r.title as release_title
+           from offer o join master m on m.id = o.master_id left join release r on r.id = o.release_id
+           where o.match_status = 'text' and o.in_stock"""
+    ).fetchall()
+    stats, examples, moves, resets = defaultdict(int), [], [], []
+    for row in rows:
+        artist, album = _hints(row)
+        # сопоставляли либо с альбомом в базе, либо с названием издания из поиска Discogs («Kylie* - Disco»)
+        found_as = [(row["artist_display"], row["title"])]
+        if row["release_title"]:
+            found_as.append(textmatch.split_result_title(row["release_title"]))
+        current = max(textmatch.acceptable_parts(artist, album, a, t) for a, t in found_as)
+        key = title_key(album)
+        best = _best_local(artist, album, by_key.get(key, [])) if len(key) >= 2 else None
+        if best and best[1] != row["master_id"] and best[0] > current:
+            moves.append((best[1], row["id"]))
+            stats["moved"] += 1
+            target = next(m for m in by_key[key] if m["id"] == best[1])
+            change = f"{target['artist_display']} — {target['title']}"
+        elif not current and artist and all(textmatch.other_artist(artist, a) for a, _ in found_as):
+            resets.append((row["id"],))
+            stats["reset"] += 1
+            change = "заново искать"
+        else:
+            stats["kept"] += 1
+            continue
+        if len(examples) < samples:
+            examples.append(f"{row['raw_title']}: {row['artist_display']} — {row['title']} → {change}")
+    if apply:
         with conn.cursor() as cur:
-            cur.executemany("update master set title_key = %s, core_key = %s where id = %s", stale)
+            cur.executemany("update offer set master_id = %s, release_id = null where id = %s", moves)
+            cur.executemany(
+                "update offer set master_id = null, release_id = null, match_status = 'pending' where id = %s", resets
+            )
+    log.info("перепроверка текстовых сопоставлений%s: %s", "" if apply else " (без изменений)", dict(stats))
+    return {**stats, "applied": apply, "examples": examples}
 
 
 def _core_key(title: str | None) -> str:
     return title_key(textmatch.album_core(title or ""))
-
-
-def _text_query(offer: dict) -> str:
-    artist = (offer["artist_hint"] or "").strip()
-    album = (offer["album_hint"] or "").strip()
-    if textmatch.is_compilation(artist):
-        artist = ""
-    query = " ".join(x for x in (artist, album) if x) or offer["raw_title"]
-    query = re.sub(r"\([^)]*\)|\|.*$", " ", query)
-    return re.sub(r"\s+", " ", query).strip()
 
 
 def _tokens(text: str) -> set[str]:

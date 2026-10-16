@@ -26,6 +26,27 @@ _DESCRIPTORS = {
 }
 # Лишние слова такого вида означают другое издание: «Greatest Hits» ≠ «Greatest Hits Vol. 2»
 _EDITION_MARKERS = re.compile(r"^(\d+|vol|volume|part|pt|ii|iii|iv|v|vi|chapter|том|часть)$")
+# Слова состава: «The Miles Davis Quintet», «Andy Sheppard Quartet» — тот же исполнитель
+_ENSEMBLE = {
+    "quartet", "quintet", "trio", "sextet", "septet", "octet", "nonet", "orchestra", "band", "group", "ensemble",
+    "experience", "symphony", "philharmonic", "chamber", "chorus", "choir", "singers", "strings",
+    "квартет", "квинтет", "трио", "оркестр", "ансамбль", "группа", "хор",
+}
+# Связки в подписях исполнителей — не часть имени: «Ian Carr With Nucleus», «Byron Janis Plays Mussorgsky»
+_LINKS = {
+    "with", "featuring", "feat", "ft", "vs", "v", "presents", "present", "introducing", "meets", "plays", "narrates",
+    "performed", "performs", "perform", "by", "plus", "x", "e", "y", "et", "und", "his", "her", "their", "collaboration",
+}
+_ARTIST_SMALL = _SMALL | _LINKS
+# Разделители исполнителей в подписи: «Prince And The Revolution», «Nick Cave & Warren Ellis», «Lada Dance = Лада Дэнс»
+_CONNECTORS = re.compile(
+    r"\s+(?:and|with|in collaboration with|featuring|feat\.?|ft\.?|vs\.?|v|presents?|introducing|meets|plays"
+    r"|narrates|performed by|performs?|plus|x|e|y|et|und|и)\s+|\s+-\s+|\s*[,;&/+=•·*]\s*",
+    re.I,
+)
+# Пояснения в скобках: номер омонима Discogs «Future (4)», «ANOHNI (ex-ANTONY & THE JOHNSONS)»
+_ARTIST_NOTE = re.compile(r"\([^()]*\)")
+_BIG_BAND = re.compile(r"\bbig band\b", re.I)
 
 
 def words(text: str | None) -> list[str]:
@@ -56,16 +77,59 @@ def ratio(a: str, b: str) -> float:
 
 
 def artist_score(query: str | None, result: str | None) -> float:
-    """1.0 — исполнитель из магазина целиком входит в подпись Discogs (или наоборот, для классики)."""
-    q = set(words(query)) - _SMALL
-    r = set(words(result)) - _SMALL
+    """1.0 — тот же исполнитель; 0.9–0.95 — один из исполнителей подписи; меньше 0.85 — другой исполнитель.
+
+    Вхождение слов само по себе ничего не значит: «Little Big» ⊂ «Little Big Town», «Prince» ⊂ «Prince Buster».
+    Засчитываем, только если каждое слово объясняется целым исполнителем подписи или его фамилией.
+    """
+    q = _artist_words(query)
+    r = _artist_words(result)
     if not q or not r:
         return 0.0
-    if q <= r:
-        return 1.0  # «Prince» ⊂ «Prince And The Revolution», «Nick Cave / Warren Ellis» = «Nick Cave & Warren Ellis»
-    if r <= q:
-        return 0.9  # «Sir Edward William Elgar, Wiener Philharmoniker» ⊃ «Elgar»
+    if q == r:
+        return 1.0  # «Nick Cave / Warren Ellis» = «Nick Cave & Warren Ellis», «Ian Carr With Nucleus (3)»
+    if q < r:
+        return 0.95 if _covered(q, result or "") else 0.6  # «Prince» в «Prince And The Revolution»
+    if r < q:
+        if "*" in (result or "") or _covered(r, query or ""):
+            return 0.9  # вариант имени Discogs «Kylie*»; «Elgar» из «Sir Edward William Elgar, Wiener …»
+        return 0.6
     return ratio(query or "", result or "")
+
+
+def other_artist(query: str | None, result: str | None) -> bool:
+    """Подпись содержит слова исполнителя, но это другой исполнитель: «Little Big» и «Little Big Town»."""
+    if is_compilation(query) or is_compilation(result):
+        return False
+    q, r = _artist_words(query), _artist_words(result)
+    return bool(q and r) and (q < r or r < q) and artist_score(query, result) < ACCEPT
+
+
+def _clean_artist(text: str | None) -> str:
+    text = _ARTIST_NOTE.sub(" ", _ARTIST_NOTE.sub(" ", text or ""))  # дважды — для вложенных скобок
+    return _BIG_BAND.sub("band", text)
+
+
+def _artist_words(text: str | None) -> set[str]:
+    return set(words(_clean_artist(text))) - _ARTIST_SMALL
+
+
+def _covered(names: set[str], text: str) -> bool:
+    """Каждое из слов names объясняется исполнителем из подписи text, который:
+    - целиком состоит из этих слов: «John Coltrane» в «The John Coltrane Quartet»;
+    - кончается на одно из них, то есть на фамилию: «Elgar» в «Sir Edward Elgar», «Lee Perry» в «Lee Scratch Perry»;
+    - или называет коллектив исполнителя: «Peter Green» в «Peter Green Splinter Group»."""
+    names = names - _ENSEMBLE
+    covered: set[str] = set()
+    for part in _CONNECTORS.split(_clean_artist(text)):
+        raw = [w for w in words(part) if w not in _ARTIST_SMALL]
+        seg = [w for w in raw if w not in _ENSEMBLE]
+        if not seg:
+            continue
+        own_band = raw[-1] in _ENSEMBLE and len(seg) > len(names) and set(seg[:len(names)]) == names
+        if set(seg) <= names or seg[-1] in names or own_band:
+            covered |= set(seg) & names
+    return bool(names) and names <= covered
 
 
 def album_score(query: str | None, result: str | None) -> float:
@@ -74,6 +138,8 @@ def album_score(query: str | None, result: str | None) -> float:
         return 0.0
     full = set(words(result))
     if not q <= full:
+        if any(_EDITION_MARKERS.match(w) for w in q - full):
+            return 0.5  # «Part 2» ≠ «Part 1»: похожие строки, но другой том
         return ratio(query or "", album_core(result or ""))  # опечатки: «Tattoed» ~ «Tattooed»
     extra = set(words(album_core(result or ""))) - q - _SMALL - _SOUNDTRACK - _DESCRIPTORS
     if any(_EDITION_MARKERS.match(w) for w in extra):
@@ -83,7 +149,12 @@ def album_score(query: str | None, result: str | None) -> float:
 
 
 def score(artist: str | None, album: str | None, result_title: str) -> tuple[float, float]:
-    r_artist, r_album = split_result_title(result_title)
+    """Оценка по названию из поиска Discogs «Artist - Title»."""
+    return score_parts(artist, album, *split_result_title(result_title))
+
+
+def score_parts(artist: str | None, album: str | None, r_artist: str, r_album: str) -> tuple[float, float]:
+    """Оценка по исполнителю и альбому Discogs по отдельности (в подписи бывает « - »: «Henry Purcell - Alfred Deller»)."""
     if is_compilation(artist) or not artist:
         # сборник должен совпасть со сборником: «OST — A Star Is Born» ≠ «Judy Garland — A Star Is Born»
         a = 1.0 if is_compilation(r_artist) else 0.0
@@ -93,11 +164,15 @@ def score(artist: str | None, album: str | None, result_title: str) -> tuple[flo
 
 
 def acceptable(artist: str | None, album: str | None, result_title: str) -> float:
-    """Итоговая оценка совпадения (0, если не принимаем)."""
-    a, b = score(artist, album, result_title)
+    """Итоговая оценка совпадения с названием из поиска Discogs (0, если не принимаем)."""
+    return acceptable_parts(artist, album, *split_result_title(result_title))
+
+
+def acceptable_parts(artist: str | None, album: str | None, r_artist: str, r_album: str) -> float:
+    a, b = score_parts(artist, album, r_artist, r_album)
     if a < ACCEPT or b < ACCEPT:
         return 0.0
     # для сборников и безымянных исполнителей однословные альбомы слишком неоднозначны
-    if (is_compilation(artist) or not artist) and len(set(words(album)) - _SMALL) < 2:
+    if (is_compilation(artist) or not artist) and len([w for w in words(album) if w not in _SMALL]) < 2:
         return 0.0
     return a + b

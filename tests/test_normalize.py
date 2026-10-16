@@ -1,8 +1,8 @@
 from pipeline.adapters.pult import extract_products
-from pipeline.match import _album_coverage, _text_query, master_values
+from pipeline.match import _album_coverage, master_values
 from pipeline.normalize import (
     barcode_key, clean_barcode, clean_discogs_name, color_part_of_title, detect_color, detect_qty,
-    split_artist_album, to_price,
+    split_title, to_price,
 )
 
 
@@ -43,7 +43,7 @@ def test_detect_qty():
 
 
 def test_split_and_names():
-    assert split_artist_album("Kendrick Lamar – good kid, m.a.a.d city (10th Anniversary)") == (
+    assert split_title("Kendrick Lamar – good kid, m.a.a.d city (10th Anniversary)") == (
         "Kendrick Lamar", "good kid, m.a.a.d city")
     assert clean_discogs_name("Future (4)") == "Future"
     assert clean_discogs_name("Prodigy*") == "Prodigy"
@@ -57,9 +57,7 @@ def test_pult_extract_products():
     assert products == [{"id": "1", "name": 'A ["x"]', "price": {"current": 3490}}]
 
 
-def test_text_query_and_coverage():
-    offer = {"artist_hint": "OST", "album_hint": "Euphoria (Original Score)", "raw_title": "x"}
-    assert _text_query(offer) == "Euphoria"
+def test_album_coverage():
     assert _album_coverage({"album_hint": "HUMANZ"}, "Gorillaz - G Collection") == 0
     assert _album_coverage({"album_hint": "Renegades"}, "Rage Against The Machine - Renegades") == 1
 
@@ -112,3 +110,26 @@ def test_korobka_format_line_does_not_swallow_tracklist():
     }
     offer = _parse(product, set())
     assert offer.color_raw == "Vinyl, LP, Album, Red" and offer.color == "coloured"
+
+
+def test_is_used():
+    from pipeline.normalize import is_used
+    assert is_used("Airto – Fingers (Vintage)", "Vinyl, LP, Album")
+    assert is_used("Stereophonic Space Sound Unlimited – The Spacesound Effect (Б/У)", "Б/У LP")
+    assert is_used("Utada Hikaru – Ultra Blue (б/у, Near Mint/Near Mint)", "б/у, Near Mint/Near Mint 2 x Vinyl, LP")
+    assert is_used("Miles Davis Kind Of Blue | Used", None)
+    assert is_used("Artist – Album (LP, VG+/NM)", None)
+    assert not is_used("John Cale – Vintage Violence (Crystal Clear Vinyl)", "Crystal Clear Vinyl")
+    assert not is_used("JAMES BLUNT — Who We Used To Be (LP)", "LP")
+    assert not is_used("THE VINTAGE CARAVAN — Portals (2LP)", "2LP")
+    assert not is_used("Artist – Album (Remastered)", "Vinyl, LP, Album, Mint Green")
+
+
+def test_html_price():
+    from pipeline.adapters._html import price
+    assert price("4 100 руб.") == 4100
+    assert price("3\u00a0990 ₽") == 3990
+    assert price("от 2 590 ₽") == 2590
+    assert price("3300.00") == 3300  # не 330000
+    assert price("4 990 ₽ 3 990 ₽") == 4990  # первое число, а не склейка 49903990
+    assert price("") is None and price(None) is None

@@ -80,16 +80,21 @@ def edition_text(title: str) -> str | None:
 def split_title(title: str) -> tuple[str | None, str | None]:
     """«2Pac - Part 2: Life (2LP) Grey» → («2Pac», «Part 2: Life»): альбом — до первой скобки."""
     title = unescape(title)
-    for sep in (" – ", " — ", " - "):
-        if sep in title:
-            artist, rest = title.split(sep, 1)
-            artist = _dedupe_artist(artist.strip())
-            # «Big John Patton - Big John Patton - Let 'em Roll»: исполнитель повторён в названии
-            for sep2 in (" – ", " — ", " - "):
-                if artist and rest.lower().startswith(artist.lower() + sep2):
-                    rest = rest[len(artist) + len(sep2):]
-            return artist or None, album_before_parentheses(rest)
+    # первое тире в строке: «ГЛАДКОВ — Ты – Мне, Я – Тебе» → («ГЛАДКОВ», «Ты – Мне, Я – Тебе»)
+    found = [(title.find(sep), sep) for sep in _TITLE_SEPARATORS if sep in title]
+    if found:
+        pos, sep = min(found)
+        artist, rest = title[:pos], title[pos + len(sep):]
+        artist = _dedupe_artist(artist.strip())
+        # «Big John Patton - Big John Patton - Let 'em Roll»: исполнитель повторён в названии
+        for sep2 in _TITLE_SEPARATORS:
+            if artist and rest.lower().startswith(artist.lower() + sep2):
+                rest = rest[len(artist) + len(sep2):]
+        return artist or None, album_before_parentheses(rest)
     return None, album_before_parentheses(title)
+
+
+_TITLE_SEPARATORS = (" – ", " — ", " - ")
 
 
 def _dedupe_artist(artist: str) -> str:
@@ -142,16 +147,6 @@ def strip_parentheses(text: str) -> str:
     return re.sub(r"\s*\([^()]*\)\s*", " ", text).strip()
 
 
-def split_artist_album(title: str) -> tuple[str | None, str | None]:
-    """«Artist – Album (…)» или «Artist - Album» → (artist, album)."""
-    base = strip_parentheses(unescape(title))
-    for sep in (" – ", " — ", " - "):
-        if sep in base:
-            artist, album = base.split(sep, 1)
-            return artist.strip() or None, album.strip() or None
-    return None, base or None
-
-
 def clean_discogs_name(name: str) -> str:
     """«Future (4)» → «Future», «Prodigy*» → «Prodigy» (номера омонимов и ANV-звёздочки Discogs)."""
     name = re.sub(r"\s*\(\d+\)$", "", name.strip())
@@ -195,3 +190,20 @@ def is_non_vinyl(raw_title: str | None, edition: str | None = None) -> bool:
     """
     text = " ".join(x for x in (edition_text(raw_title or ""), (edition or "")[:300]) if x)
     return bool(_OTHER_MEDIA.search(text)) and not _VINYL_MARKERS.search(text)
+
+
+_USED = re.compile(
+    r"б/у|\bб\.у\.|\bused\b|\bvintage\b|винтаж|second[- ]hand|near mint|\bmint\s*-?\s*/|"
+    r"\b(?:NM|EX|VG\+?|G\+?)\s*/\s*(?:NM|EX|VG\+?|G\+?)\b",
+    re.I)
+
+
+def is_used(raw_title: str | None, edition: str | None = None) -> bool:
+    """Подержанная пластинка: «Airto – Fingers (Vintage)», «… (б/у, Near Mint/Near Mint)», «… | Used».
+
+    Как и в is_non_vinyl, смотрим только на описание издания: «John Cale – Vintage Violence» — это название альбома.
+    """
+    if re.search(r"\|\s*(?:used|б/у)\b", raw_title or "", re.I):
+        return True
+    text = " ".join(x for x in (edition_text(raw_title or ""), (edition or "")[:300]) if x)
+    return bool(_USED.search(text))

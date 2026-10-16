@@ -83,8 +83,29 @@ create table if not exists scrape_run ( -- журнал прогонов: кон
   error text
 );
 
--- Одна строка на альбом, у которого есть хотя бы одно предложение в наличии.
+-- Предложения, которые показываем на сайте: в наличии, с ценой, магазин включён и его данные свежие.
+-- Свежесть считаем относительно самого свежего магазина, а не текущего времени: если конвейер не запускался
+-- несколько дней, сайт показывает последние данные, а не пустой каталог.
+--   * магазин собирался успешно (ok/partial) не раньше чем за 3 дня до самого свежего магазина —
+--     иначе он сломался или закрылся, и его цены уже не актуальны;
+--   * позиция была в выдаче не раньше чем за 3 дня до последнего успешного прогона своего магазина —
+--     прогоны partial не снимают с наличия то, чего не увидели, и без этого условия позиция висела бы до purge.
 -- security_invoker: представление подчиняется правам вызывающего, а не владельца.
+create or replace view live_offer with (security_invoker = true) as
+with shop_success as (
+  select shop_id, max(started_at) as last_success
+  from scrape_run where status in ('ok', 'partial') group by shop_id
+)
+select o.id, o.shop_id, o.master_id, o.release_id, o.url, o.price, o.color, o.color_raw, o.format_qty,
+       o.image_url, o.first_seen_at
+from offer o
+join shop s on s.id = o.shop_id and s.is_active
+join shop_success r on r.shop_id = o.shop_id
+where o.in_stock and o.price is not null
+  and r.last_success > (select max(last_success) from shop_success) - interval '3 days'
+  and o.last_seen_at > r.last_success - interval '3 days';
+
+-- Одна строка на альбом, у которого есть хотя бы одно предложение на сайте.
 create or replace view catalog_card with (security_invoker = true) as
 select m.id, m.artist_display, m.title, m.year, m.genres, m.styles,
        m.cover_url, m.cover_thumb, m.discogs_uri,
@@ -94,7 +115,7 @@ select m.id, m.artist_display, m.title, m.year, m.genres, m.styles,
        bool_or(o.color <> 'black')    as has_coloured,
        min(o.first_seen_at)           as first_seen_at
 from master m
-join offer o on o.master_id = m.id and o.in_stock and o.price is not null
+join live_offer o on o.master_id = m.id
 group by m.id;
 
 -- Supabase открывает схему public через REST API (PostgREST). Сайт к базе не обращается, поэтому

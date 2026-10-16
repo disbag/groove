@@ -38,10 +38,10 @@ def run(conn, out_dir: Path) -> dict:
         """select o.master_id, o.price, o.url, o.color, o.color_raw, o.format_qty, o.image_url,
                   s.code as shop, s.name as shop_name,
                   r.year as r_year, r.country, r.label, r.catno, r.format_desc
-           from offer o
+           from live_offer o
            join shop s on s.id = o.shop_id
            left join release r on r.id = o.release_id
-           where o.in_stock and o.price is not null and o.master_id is not null
+           where o.master_id is not null
            order by o.price"""
     ).fetchall()
     masters = {
@@ -51,11 +51,10 @@ def run(conn, out_dir: Path) -> dict:
         )
     }
     shops = conn.execute(
-        """select s.code, s.name, s.base_url, count(o.id) filter (where o.in_stock and o.master_id is not null) as offers
-           from shop s left join offer o on o.shop_id = s.id
-           where s.is_active group by s.id
-           having count(o.id) filter (where o.in_stock and o.master_id is not null) > 0
-           order by s.name"""
+        """select s.code, s.name, s.base_url, count(*) as offers
+           from shop s join live_offer o on o.shop_id = s.id
+           where o.master_id is not null
+           group by s.id order by s.name"""
     ).fetchall()
 
     by_master: dict[int, list[dict]] = {}

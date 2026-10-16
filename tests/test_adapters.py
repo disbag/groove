@@ -1,5 +1,6 @@
 """Разбор листингов на коротких кусках реальной разметки (по две карточки на магазин)."""
 
+import re
 from pathlib import Path
 
 from pipeline.adapters import _megagroup, newartstore, stereozona, vidika, vinylis
@@ -104,3 +105,37 @@ def test_first_page_404_is_an_error():
 
     with pytest.raises(requests.HTTPError):
         vinylis.fetch(AlwaysNotFound(""))
+
+
+def test_megagroup_folder_overlapping_other_folder():
+    """Страница папки, целиком уже встреченная в другой папке, — не конец папки (жанры plstkwrld пересекаются)."""
+    page = load("plstk")
+    ids = re.findall(r'name="product_id" type="hidden" value="(\d+)"', page)
+    assert len(ids) == 2
+    first, last = page, page
+    for pid in ids:
+        first = first.replace(f'value="{pid}"', f'value="8{pid}"')
+        last = last.replace(f'value="{pid}"', f'value="9{pid}"')
+    pages = {"/rock": page, "/pop": first, "/pop/p/1": page, "/pop/p/2": last}
+
+    class Folders(FakeHttp):
+        def get(self, url, params=None):
+            path = url.removeprefix("https://plstkwrld.com")
+            if path not in pages:
+                _not_found()
+            return type("Response", (), {"text": pages[path]})()
+
+    offers = {}
+    http = Folders("")
+    _megagroup.fetch_folder(http, "https://plstkwrld.com", "/rock", offers)
+    _megagroup.fetch_folder(http, "https://plstkwrld.com", "/pop", offers)
+    # вторая страница /pop целиком из /rock, но на третьей — снова новые позиции
+    assert len(offers) == 6
+
+
+def _not_found():
+    import requests
+
+    response = requests.Response()
+    response.status_code = 404
+    raise requests.HTTPError("404", response=response)

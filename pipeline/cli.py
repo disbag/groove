@@ -24,6 +24,8 @@ def main(argv: list[str] | None = None) -> int:
     p_refresh = sub.add_parser("refresh", help="обновить данные альбомов (ссылки на обложки) по кругу")
     p_refresh.add_argument("--limit", type=int, default=500)
     p_refresh.add_argument("--budget-minutes", type=float, default=15)
+    p_recheck = sub.add_parser("recheck", help="перепроверить текстовые сопоставления по текущим правилам")
+    p_recheck.add_argument("--apply", action="store_true", help="записать изменения (без флага — только отчёт)")
     p_export = sub.add_parser("export", help="выгрузить статические JSON для сайта")
     p_export.add_argument("--out", type=Path, default=config.DEFAULT_EXPORT_DIR)
     p_nightly = sub.add_parser("nightly", help="migrate → scrape → match → refresh → export → status")
@@ -43,6 +45,8 @@ def main(argv: list[str] | None = None) -> int:
         match.run(conn, Discogs(), args.budget_minutes, args.limit, args.retry_not_found)
     elif args.command == "refresh":
         match.refresh(conn, Discogs(), args.limit, args.budget_minutes)
+    elif args.command == "recheck":
+        print(json.dumps(match.recheck_text(conn, apply=args.apply), ensure_ascii=False, indent=2))
     elif args.command == "export":
         print(export.run(conn, args.out))
     elif args.command == "nightly":

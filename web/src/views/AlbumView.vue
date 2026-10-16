@@ -19,10 +19,12 @@ watch(
     missing.value = false
     coverFailed.value = false
     try {
-      album.value = await getAlbum(id)
-      document.title = `${album.value.artist} — ${album.value.title} · Groove`
+      const data = await getAlbum(id)
+      if (id !== props.id) return // пока грузилось, перешли на другой альбом
+      album.value = data
+      document.title = `${data.artist} — ${data.title} · Groove`
     } catch {
-      missing.value = true
+      if (id === props.id) missing.value = true
     }
   },
   { immediate: true },

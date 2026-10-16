@@ -47,11 +47,19 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Сбор цен, сопоставление, экспорт
+        # Параметры запуска — через переменные окружения, а не подстановкой ${{ }} в текст скрипта:
+        # иначе значение поля из формы запуска выполнилось бы как команда в шаге с секретами.
+        env:
+          EXPORT_ONLY: ${{ inputs.export_only }}
+          BUDGET_MINUTES: ${{ inputs.budget_minutes || '240' }}
+          RETRY_NOT_FOUND: ${{ inputs.retry_not_found }}
         run: |
-          if [ "${{ inputs.export_only }}" = "true" ]; then
+          if [ "$EXPORT_ONLY" = "true" ]; then
             python -m pipeline migrate && python -m pipeline export
+          elif [ "$RETRY_NOT_FOUND" = "true" ]; then
+            python -m pipeline nightly --budget-minutes "$BUDGET_MINUTES" --retry-not-found
           else
-            python -m pipeline nightly --budget-minutes "${{ inputs.budget_minutes || '240' }}" ${{ inputs.retry_not_found && '--retry-not-found' || '' }}
+            python -m pipeline nightly --budget-minutes "$BUDGET_MINUTES"
           fi
 
       - uses: actions/setup-node@v7

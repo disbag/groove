@@ -33,6 +33,20 @@ export function formatDate(iso) {
   })
 }
 
-// Для поиска: без регистра, ё = е, без пунктуации
+// Буквы, которые не раскладываются на основу и диакритику
+const LETTERS = { ø: 'o', æ: 'ae', œ: 'oe', ß: 'ss', ł: 'l', đ: 'd', ð: 'd', þ: 'th', ı: 'i' }
+
+// Для поиска: без регистра, ё = е, без диакритики («Björk» находится по «bjork»), без пунктуации.
+// й сохраняем: это отдельная буква, а не «и» с диакритикой.
 export const normalize = (text) =>
-  (text || '').toLowerCase().replace(/ё/g, 'е').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim()
+  (text || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/й/g, '\u0000')
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(/\u0000/g, 'й')
+    .replace(/[øæœßłđðþı]/g, (ch) => LETTERS[ch])
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()

@@ -77,15 +77,19 @@ on conflict (shop_id, external_id) do update set
   price = excluded.price,
   in_stock = excluded.in_stock,
   barcode = excluded.barcode,
-  -- сменился штрихкод — сопоставляем заново
-  match_status = case when offer.barcode is distinct from excluded.barcode then 'pending' else offer.match_status end,
-  release_id = case when offer.barcode is distinct from excluded.barcode then null else offer.release_id end,
-  master_id = case when offer.barcode is distinct from excluded.barcode then null else offer.master_id end,
+  match_status = case when {rematch} then 'pending' else offer.match_status end,
+  release_id = case when {rematch} then null else offer.release_id end,
+  master_id = case when {rematch} then null else offer.master_id end,
   updated_at = case when offer.price is distinct from excluded.price or offer.in_stock is distinct from excluded.in_stock
                     then now() else offer.updated_at end,
   missed_runs = 0,
   last_seen_at = now()
-"""
+""".format(
+    # Сопоставляем заново, если сменился штрихкод, а у позиций без штрихкода — исполнитель или альбом
+    # (магазин исправил название или мы поменяли разбор названий).
+    rematch="(offer.barcode is distinct from excluded.barcode or (excluded.barcode is null and "
+            "(offer.artist_hint, offer.album_hint) is distinct from (excluded.artist_hint, excluded.album_hint)))"
+)
 
 
 def upsert_offers(conn: psycopg.Connection, shop_id: int, offers: list[Offer]) -> int:

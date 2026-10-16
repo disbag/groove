@@ -5,7 +5,7 @@ const cache = new Map()
 async function getJSON(path) {
   if (!cache.has(path)) {
     const request = fetch(base + path).then((response) => {
-      if (!response.ok) throw new Error(`${response.status} ${path}`)
+      if (!response.ok) throw Object.assign(new Error(`${response.status} ${path}`), { status: response.status })
       return response.json()
     })
     cache.set(path, request)

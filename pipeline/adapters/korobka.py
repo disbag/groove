@@ -10,14 +10,14 @@ import re
 from ..http import PoliteSession
 from ..models import Offer, Shop
 from ..normalize import (
-    clean_barcode, color_part_of_title, detect_color, detect_qty, split_artist_album, to_price, unescape,
+    clean_barcode, color_part_of_title, detect_color, detect_qty, split_title, to_price, unescape,
 )
 
 SHOP = Shop(code="korobka", name="Коробка винила", base_url="https://korobkavinyla.ru", adapter="tilda_api")
 API = "https://store.tildaapi.com/api/getproductslist/"
 STOREPART_UID = "974505268935"
 REC_ID = "771567999"
-USED_PARTS = {"Used", "VINTAGE", "Редкий Винтаж"}
+USED_PART = re.compile(r"used|vintage|винтаж|б/у", re.I)  # разделы «Used», «VINTAGE», «Редкий Винтаж»
 
 
 def fetch(http: PoliteSession) -> list[Offer]:
@@ -39,7 +39,7 @@ def fetch(http: PoliteSession) -> list[Offer]:
         seen.add(slice_no)
         data = http.get(API, params={**params, "slice": str(slice_no)}, headers=headers).json()
         for part in data.get("parts") or []:
-            if part.get("title") in USED_PARTS:
+            if USED_PART.search(part.get("title") or ""):
                 used_part_ids.add(str(part.get("uid")))
         for product in data.get("products") or []:
             offer = _parse(product, used_part_ids)
@@ -69,7 +69,7 @@ def _parse(product: dict, used_part_ids: set[str]) -> Offer | None:
     descr = "\n".join(unescape(line) for line in lines)
     fmt = _field(descr, "Format", "Формат") or ""
     color_raw = color_part_of_title(title) or fmt or None
-    artist, album = split_artist_album(title)
+    artist, album = split_title(title)
     gallery = product.get("gallery")
     image = editions[0].get("img")
     if not image and isinstance(gallery, str):

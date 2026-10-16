@@ -6,7 +6,7 @@ import time
 from . import config, db
 from .adapters import ADAPTERS
 from .http import PoliteSession
-from .normalize import is_non_vinyl
+from .normalize import is_non_vinyl, is_used
 
 log = logging.getLogger(__name__)
 
@@ -32,11 +32,7 @@ def run(conn, shop_codes: list[str] | None = None) -> list[dict]:
         t0 = time.monotonic()
         result = {"shop": code, "status": "failed", "offers": 0, "changed": 0, "out_of_stock": 0}
         try:
-            offers = module.fetch(http)
-            skipped = [o for o in offers if is_non_vinyl(o.raw_title, o.color_raw)]
-            if skipped:
-                log.info("%s: пропущено не-винила (кассеты, CD, DVD): %d", code, len(skipped))
-                offers = [o for o in offers if not is_non_vinyl(o.raw_title, o.color_raw)]
+            offers = _only_new_vinyl(code, module.fetch(http))
             previous = db.previous_seen(conn, shop_id)
             suspicious = previous is not None and len(offers) < previous * config.PARTIAL_RUN_RATIO
             changed = db.upsert_offers(conn, shop_id, offers)
@@ -61,3 +57,22 @@ def run(conn, shop_codes: list[str] | None = None) -> list[dict]:
     if purged:
         log.info("удалено устаревших позиций: %d", purged)
     return summary
+
+
+def _only_new_vinyl(code: str, offers: list) -> list:
+    """Убирает кассеты, CD, DVD и б/у, которые магазины держат в тех же разделах, что и новый винил,
+    и стирает неправдоподобные цены."""
+    kept, non_vinyl, used = [], 0, 0
+    for offer in offers:
+        if is_non_vinyl(offer.raw_title, offer.color_raw):
+            non_vinyl += 1
+        elif is_used(offer.raw_title, offer.color_raw):
+            used += 1
+        else:
+            if offer.price is not None and not config.PRICE_MIN <= offer.price <= config.PRICE_MAX:
+                log.warning("%s: неправдоподобная цена %s ₽ — %s (%s)", code, offer.price, offer.raw_title, offer.url)
+                offer.price = None
+            kept.append(offer)
+    if non_vinyl or used:
+        log.info("%s: пропущено не-винила (кассеты, CD, DVD): %d, б/у: %d", code, non_vinyl, used)
+    return kept

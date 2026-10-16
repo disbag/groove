@@ -44,6 +44,8 @@ PARTIAL_RUN_RATIO = 0.7
 MISSED_RUNS_TO_OUT_OF_STOCK = 2
 # Через сколько дней отсутствия позиция удаляется.
 PURGE_AFTER_DAYS = 60
+# Цены вне этих границ считаем ошибкой разбора или опечаткой магазина: позиция остаётся без цены и не показывается.
+PRICE_MIN, PRICE_MAX = 300, 300_000
 
 SCHEMA_PATH = ROOT / "db" / "schema.sql"
 STATUS_PATH = ROOT / "status" / "last_run.json"

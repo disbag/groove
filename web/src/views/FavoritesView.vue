@@ -6,6 +6,8 @@ import { getAlbum } from '../api.js'
 import { favorites } from '../favorites.js'
 
 // Сохранённый снимок + свежие данные карточки: цена могла измениться, альбом — закончиться.
+// fresh[id]: null — загружается, объект — карточка, false — альбома нет в каталоге (404),
+// 'error' — не загрузилось (сеть): показываем снимок без пометки «нет в наличии».
 const fresh = ref({})
 
 watchEffect(() => {
@@ -14,13 +16,13 @@ watchEffect(() => {
     fresh.value[item.id] = null
     getAlbum(item.id)
       .then((album) => (fresh.value[item.id] = album))
-      .catch(() => (fresh.value[item.id] = false))
+      .catch((error) => (fresh.value[item.id] = error.status === 404 ? false : 'error'))
   }
 })
 
 function view(item) {
   const album = fresh.value[item.id]
-  if (!album) return item
+  if (!album || typeof album !== 'object') return item
   return { ...item, p: album.min_price, n: new Set(album.offers.map((o) => o.shop)).size }
 }
 </script>

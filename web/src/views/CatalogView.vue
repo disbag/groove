@@ -19,21 +19,27 @@ const total = ref(0)
 const loading = ref(false)
 const error = ref('')
 
+// Номер последнего запроса: ответ на устаревший (жанр уже переключили) отбрасываем
+let lastRequest = 0
+
 async function load(reset) {
+  const request = ++lastRequest
   loading.value = true
   error.value = ''
   const next = reset ? 1 : page.value + 1
   try {
     const data = await getCatalogPage(genre.value, sort.value, next)
+    if (request !== lastRequest) return
     items.value = reset ? data.items : [...items.value, ...data.items]
     page.value = data.page
     pages.value = data.pages
     total.value = data.total
   } catch {
+    if (request !== lastRequest) return
     error.value = 'Не удалось загрузить каталог. Попробуйте обновить страницу.'
     if (reset) items.value = []
   } finally {
-    loading.value = false
+    if (request === lastRequest) loading.value = false
   }
 }
 
