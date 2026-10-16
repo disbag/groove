@@ -12,7 +12,7 @@ from psycopg.types.json import Jsonb
 
 from . import textmatch
 from .discogs import Discogs
-from .normalize import barcode_key, clean_barcode, clean_discogs_name, detect_color, title_key
+from .normalize import barcode_key, clean_barcode, clean_discogs_name, detect_color, detect_qty, title_key, unescape
 
 log = logging.getLogger(__name__)
 MAX_RELEASES_PER_BARCODE = 10  # у популярных альбомов под одним штрихкодом бывают десятки репрессов
@@ -160,37 +160,83 @@ def _save_release_from_search(conn, discogs: Discogs, result: dict) -> None:
 
 def _match_text(conn, discogs: Discogs, offer: dict, stats) -> None:
     artist, album = _hints(offer)
-    master_id = _local_master_by_text(conn, artist, album)
-    if master_id:
-        conn.execute("update offer set master_id = %s, match_status = 'text' where id = %s", (master_id, offer["id"]))
+    subtitle = _subtitle(offer, album)
+    local = _local_master_by_text(conn, artist, album, subtitle)
+    # Без подзаголовка в скобках альбом из базы годится сразу. С подзаголовком — только если он есть в названии:
+    # иначе «Madame X (Music From The Theater Experience)» осел бы на студийном «Madame X», уже лежащем в базе.
+    if local and (not subtitle or local[2]):
+        _set_text_match(conn, offer["id"], local[1], None)
         stats["text_local"] += 1
         return
     if not album:
         _set_status(conn, offer["id"], "not_found")
         stats["not_found"] += 1
         return
-    # 1) среди виниловых изданий — так сразу известно конкретное издание
-    query = " ".join(x for x in (None if textmatch.is_compilation(artist) else artist, album) if x)
-    best = _best(artist, album, discogs.search_vinyl_releases(query))
-    if best:
-        _save_release_from_search(conn, discogs, best)
-        master_id = best.get("master_id") or -best["id"]
-        conn.execute(
-            "update offer set release_id = %s, master_id = %s, match_status = 'text' where id = %s",
-            (best["id"], master_id, offer["id"]),
-        )
-        stats["text"] += 1
+    search_artist = None if textmatch.is_compilation(artist) else artist
+    fallback = None
+    # 1) среди виниловых изданий — так сразу известно конкретное издание; сначала вместе с подзаголовком
+    for query_album in ([f"{album} {subtitle}"] if subtitle else []) + [album]:
+        query = " ".join(x for x in (search_artist, query_album) if x)
+        best = _best(artist, album, discogs.search_vinyl_releases(query), subtitle)
+        if best and (not subtitle or best[1]):
+            return _take_release(conn, discogs, offer["id"], best[0], stats)
+        fallback = fallback or best
+    if local:  # альбом из базы без подзаголовка лучше такого же из поиска: на него не нужен запрос
+        _set_text_match(conn, offer["id"], local[1], None)
+        stats["text_local"] += 1
         return
+    if fallback:
+        return _take_release(conn, discogs, offer["id"], fallback[0], stats)
     # 2) альбом по полям без фильтра формата: винил мог ещё не попасть в Discogs, а карточка у нас — альбом
-    best = _best(artist, album, discogs.search_master_fields(
-        None if textmatch.is_compilation(artist) else artist, album))
+    best = _best(artist, album, discogs.search_master_fields(search_artist, album), subtitle)
     if best:
-        _ensure_master(conn, discogs, best["id"], None)
-        conn.execute("update offer set master_id = %s, match_status = 'text' where id = %s", (best["id"], offer["id"]))
+        _ensure_master(conn, discogs, best[0]["id"], None)
+        _set_text_match(conn, offer["id"], best[0]["id"], None)
         stats["text_master"] += 1
         return
     _set_status(conn, offer["id"], "not_found")
     stats["not_found"] += 1
+
+
+def _take_release(conn, discogs: Discogs, offer_id: int, result: dict, stats) -> None:
+    _save_release_from_search(conn, discogs, result)
+    _set_text_match(conn, offer_id, result.get("master_id") or -result["id"], result["id"])
+    stats["text"] += 1
+
+
+def _set_text_match(conn, offer_id: int, master_id: int, release_id: int | None) -> None:
+    conn.execute(
+        "update offer set master_id = %s, release_id = %s, match_status = 'text' where id = %s",
+        (master_id, release_id, offer_id),
+    )
+
+
+# Скобки с описанием издания, а не частью названия: «(LP)», «(Red Vinyl)», «(Deluxe Edition)», «(180g)»
+_EDITION_NOTE = re.compile(
+    r"\b(lp|ep|vinyl|винил\w*|vinile|пластинк\w*|edition|издание|remaster\w*|deluxe|anniversary|anniversaire|reissue"
+    r"|limited|box|gatefold|rpm|\d+\s*(g|gr|gram)|mono|stereo|exclusive|press\w*|import|bonus|expanded|picture"
+    r"|splatter|marble|clear|transparent|translucent|\d{4}|rsd|record store day|signed|автограф\w*|афтограф\w*"
+    r"|подпис\w*|вложени\w*|экземпляр\w*|cd|dvd|blu-?ray|single|сингл|\d+\s*(\"|″|''|&quot;|inch|-inch)|series"
+    r"|half[- ]?speed|cover|artwork|numbered|mfsl|various artists|tone poet|acoustic sounds?|impex|records|sale)\b",
+    re.I,
+)
+
+
+def _subtitle(offer: dict, album: str | None) -> str | None:
+    """Текст из скобок названия магазина, похожий на часть названия альбома, а не на описание издания:
+    «Madame X (Music From The Theater Experience)» → «Music From The Theater Experience»."""
+    title = unescape(offer.get("raw_title") or "")
+    album_words = set(textmatch.words(album))
+    # только скобки после начала названия альбома: «Pink (P!nk) – Funhouse» — это второе имя исполнителя
+    start = title.lower().find((album or "").lower()[:20]) if album else -1
+    parts = [
+        chunk.group(1) for chunk in re.finditer(r"\(([^()]*)\)", title)
+        if chunk.start() >= max(start, 0)
+        and not _EDITION_NOTE.search(chunk.group(1)) and detect_color(chunk.group(1)) == "black"
+        and not detect_qty(chunk.group(1)) and not re.match(r"\s*(with|feat|ft\.|w/|при участии)", chunk.group(1), re.I)
+        and len(textmatch.words(chunk.group(1))) >= 2 and not set(textmatch.words(chunk.group(1))) <= album_words
+    ]
+    return " ".join(parts) or None
 
 
 def _hints(offer: dict) -> tuple[str | None, str | None]:
@@ -201,36 +247,52 @@ def _hints(offer: dict) -> tuple[str | None, str | None]:
     return artist, album
 
 
-def _best(artist: str | None, album: str, results: list[dict]) -> dict | None:
-    scored = [(textmatch.acceptable(artist, album, r.get("title") or ""), i, r) for i, r in enumerate(results[:10])]
+def _best(artist: str | None, album: str, results: list[dict], subtitle: str | None = None) -> tuple[dict, bool] | None:
+    """Лучший результат поиска Discogs и признак, что в его названии есть подзаголовок из скобок."""
+    scored = [
+        (textmatch.acceptable(artist, album, r.get("title") or "", subtitle), i, r) for i, r in enumerate(results[:10])
+    ]
     scored = [s for s in scored if s[0] > 0]
+    if not scored:
+        return None
     # при равной оценке — порядок выдачи Discogs (релевантность)
-    return max(scored, key=lambda s: (s[0], -s[1]))[2] if scored else None
+    best = max(scored, key=lambda s: (s[0], -s[1]))[2]
+    title = textmatch.split_result_title(best.get("title") or "")[1]
+    return best, textmatch.subtitle_coverage(subtitle, title) > 0
 
 
-def _local_master_by_text(conn, artist: str | None, album: str | None) -> int | None:
-    """Альбом уже есть в базе (по названию целиком или без приписок) и исполнитель подходит — без запроса к Discogs."""
+def _local_master_by_text(conn, artist: str | None, album: str | None,
+                          subtitle: str | None = None) -> tuple[float, int, bool] | None:
+    """Альбом уже есть в базе (по названию целиком, без приписок или вместе с подзаголовком из скобок)
+    и исполнитель подходит — без запроса к Discogs. (оценка, id, есть ли в названии подзаголовок)."""
     key = title_key(album)
     if len(key) < 2:
         return None
+    keys = [key] + ([title_key(f"{album} {subtitle}")] if subtitle else [])
     rows = conn.execute(
-        "select id, artist_display, title from master where title_key = %s or core_key = %s", (key, key)
+        "select id, artist_display, title from master where title_key = any(%s) or core_key = any(%s)", (keys, keys)
     ).fetchall()
-    best = _best_local(artist, album, rows)
-    return best[1] if best else None
+    return _best_local(artist, album, rows, subtitle)
 
 
-def _best_local(artist: str | None, album: str | None, rows) -> tuple[float, int] | None:
-    """Лучший альбом из базы: (оценка, id). При равной оценке — настоящий master и меньший id (обычно оригинал)."""
-    scored = [(textmatch.acceptable_parts(artist, album, r["artist_display"], r["title"]), r["id"]) for r in rows]
-    return max((s for s in scored if s[0] > 0), key=lambda s: (s[0], s[1] > 0, -abs(s[1])), default=None)
+def _best_local(artist: str | None, album: str | None, rows,
+                subtitle: str | None = None) -> tuple[float, int, bool] | None:
+    """Лучший альбом из базы: (оценка, id, есть ли подзаголовок). При равной оценке — настоящий master
+    и меньший id (обычно оригинал)."""
+    titles = {r["id"]: r["title"] for r in rows}
+    scored = [
+        (textmatch.acceptable_parts(artist, album, r["artist_display"], r["title"], subtitle), r["id"]) for r in rows
+    ]
+    best = max((s for s in scored if s[0] > 0), key=lambda s: (s[0], s[1] > 0, -abs(s[1])), default=None)
+    return (*best, textmatch.subtitle_coverage(subtitle, titles[best[1]]) > 0) if best else None
 
 
 def recheck_text(conn, apply: bool = False, samples: int = 60) -> dict:
     """Перепроверяет текстовые сопоставления после изменения правил.
 
     Если в базе есть альбом, который подходит лучше, позиция переносится на него. Если позиция привязана
-    к другому исполнителю с похожим именем («Little Big» → «Little Big Town»), она снова становится pending
+    к другому исполнителю с похожим именем («Little Big» → «Little Big Town») или к альбому без подзаголовка
+    из скобок («Madame X (Music From The Theater Experience)» → «Madame X»), она снова становится pending
     и найдётся заново при следующем сопоставлении. Без apply только считает и показывает примеры.
     """
     masters = conn.execute("select id, artist_display, title, title_key, core_key from master").fetchall()
@@ -248,22 +310,30 @@ def recheck_text(conn, apply: bool = False, samples: int = 60) -> dict:
     stats, examples, moves, resets = defaultdict(int), [], [], []
     for row in rows:
         artist, album = _hints(row)
+        subtitle = _subtitle(row, album)
         # сопоставляли либо с альбомом в базе, либо с названием издания из поиска Discogs («Kylie* - Disco»)
         found_as = [(row["artist_display"], row["title"])]
         if row["release_title"]:
             found_as.append(textmatch.split_result_title(row["release_title"]))
-        current = max(textmatch.acceptable_parts(artist, album, a, t) for a, t in found_as)
-        key = title_key(album)
-        best = _best_local(artist, album, by_key.get(key, [])) if len(key) >= 2 else None
+        current = max(textmatch.acceptable_parts(artist, album, a, t, subtitle) for a, t in found_as)
+        has_subtitle = any(textmatch.subtitle_coverage(subtitle, t) > 0 for _, t in found_as)
+        keys = [title_key(album)] + ([title_key(f"{album} {subtitle}")] if subtitle else [])
+        candidates = list({m["id"]: m for k in keys if len(k) >= 2 for m in by_key.get(k, [])}.values())
+        best = _best_local(artist, album, candidates, subtitle)
         if best and best[1] != row["master_id"] and best[0] > current:
             moves.append((best[1], row["id"]))
             stats["moved"] += 1
-            target = next(m for m in by_key[key] if m["id"] == best[1])
+            target = next(m for m in candidates if m["id"] == best[1])
             change = f"{target['artist_display']} — {target['title']}"
         elif not current and artist and all(textmatch.other_artist(artist, a) for a, _ in found_as):
             resets.append((row["id"],))
             stats["reset"] += 1
             change = "заново искать"
+        elif subtitle and not has_subtitle:
+            # сопоставлено без учёта подзаголовка (раньше скобки отбрасывались) — ищем ещё раз вместе с ним
+            resets.append((row["id"],))
+            stats["reset_subtitle"] += 1
+            change = f"заново искать с «{subtitle}»"
         else:
             stats["kept"] += 1
             continue

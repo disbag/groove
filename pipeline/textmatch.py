@@ -132,7 +132,7 @@ def _covered(names: set[str], text: str) -> bool:
     return bool(names) and names <= covered
 
 
-def album_score(query: str | None, result: str | None) -> float:
+def album_score(query: str | None, result: str | None, subtitle: str | None = None) -> float:
     q = set(words(query)) - _SMALL
     if not q:
         return 0.0
@@ -141,7 +141,8 @@ def album_score(query: str | None, result: str | None) -> float:
         if any(_EDITION_MARKERS.match(w) for w in q - full):
             return 0.5  # «Part 2» ≠ «Part 1»: похожие строки, но другой том
         return ratio(query or "", album_core(result or ""))  # опечатки: «Tattoed» ~ «Tattooed»
-    extra = set(words(album_core(result or ""))) - q - _SMALL - _SOUNDTRACK - _DESCRIPTORS
+    # слова из скобок магазина — не лишние: «Madame X (Music From The Theater Experience)»
+    extra = set(words(album_core(result or ""))) - q - _SMALL - _SOUNDTRACK - _DESCRIPTORS - set(words(subtitle))
     if any(_EDITION_MARKERS.match(w) for w in extra):
         return 0.5  # другой том / часть
     # любое другое лишнее слово — скорее другой альбом: «Kid A» ≠ «Kid A Mnesia»
@@ -153,26 +154,37 @@ def score(artist: str | None, album: str | None, result_title: str) -> tuple[flo
     return score_parts(artist, album, *split_result_title(result_title))
 
 
-def score_parts(artist: str | None, album: str | None, r_artist: str, r_album: str) -> tuple[float, float]:
+def score_parts(artist: str | None, album: str | None, r_artist: str, r_album: str,
+                subtitle: str | None = None) -> tuple[float, float]:
     """Оценка по исполнителю и альбому Discogs по отдельности (в подписи бывает « - »: «Henry Purcell - Alfred Deller»)."""
     if is_compilation(artist) or not artist:
         # сборник должен совпасть со сборником: «OST — A Star Is Born» ≠ «Judy Garland — A Star Is Born»
         a = 1.0 if is_compilation(r_artist) else 0.0
     else:
         a = artist_score(artist, r_artist)
-    return a, album_score(album, r_album)
+    return a, album_score(album, r_album, subtitle)
 
 
-def acceptable(artist: str | None, album: str | None, result_title: str) -> float:
+def acceptable(artist: str | None, album: str | None, result_title: str, subtitle: str | None = None) -> float:
     """Итоговая оценка совпадения с названием из поиска Discogs (0, если не принимаем)."""
-    return acceptable_parts(artist, album, *split_result_title(result_title))
+    return acceptable_parts(artist, album, *split_result_title(result_title), subtitle=subtitle)
 
 
-def acceptable_parts(artist: str | None, album: str | None, r_artist: str, r_album: str) -> float:
-    a, b = score_parts(artist, album, r_artist, r_album)
+def acceptable_parts(artist: str | None, album: str | None, r_artist: str, r_album: str,
+                     subtitle: str | None = None) -> float:
+    """subtitle — текст из скобок в названии магазина, похожий на часть названия, а не на описание издания.
+    Альбом, в названии которого он есть, получает преимущество: «Madame X» и «Madame X: Music From
+    The Theater Experience» для позиции «Madame X (Music From The Theater Experience)»."""
+    a, b = score_parts(artist, album, r_artist, r_album, subtitle)
     if a < ACCEPT or b < ACCEPT:
         return 0.0
     # для сборников и безымянных исполнителей однословные альбомы слишком неоднозначны
     if (is_compilation(artist) or not artist) and len([w for w in words(album) if w not in _SMALL]) < 2:
         return 0.0
-    return a + b
+    return a + b + 0.1 * subtitle_coverage(subtitle, r_album)
+
+
+def subtitle_coverage(subtitle: str | None, result_album: str | None) -> float:
+    """Доля слов подзаголовка из скобок, которые есть в названии альбома Discogs."""
+    wanted = set(words(subtitle)) - _SMALL
+    return len(wanted & set(words(result_album))) / len(wanted) if wanted else 0.0

@@ -75,3 +75,28 @@ def test_exact_artist_beats_partial():
     exact = tm.acceptable("JOHN COLTRANE", "Coltrane", "John Coltrane - Coltrane")
     quartet = tm.acceptable("JOHN COLTRANE", "Coltrane", "The John Coltrane Quartet - Coltrane")
     assert exact > quartet > 0
+
+
+def test_subtitle_from_parentheses():
+    from pipeline.match import _subtitle
+
+    def sub(raw, album):
+        return _subtitle({"raw_title": raw}, album)
+
+    assert sub("Madonna – Madame X (Music From The Theater Experience)", "Madame X") == "Music From The Theater Experience"
+    assert sub("Taylor Swift - 1989 (Taylor&#039;s Version) (2LP) Yellow", "1989") == "Taylor's Version"
+    # описания издания и второе имя исполнителя — не подзаголовок
+    assert sub("Pink (P!nk) – Funhouse", "Funhouse") is None
+    assert sub("Queen - Bohemian Rhapsody (12&quot;, сингл) Transparent Blue", "Bohemian Rhapsody") is None
+    assert sub("LEE MORGAN — Cornbread (Tone Poet) (LP)", "Cornbread") is None
+    assert sub("Kanye West – Vultures 1 (with Ty Dolla Sign) (Clear/Gold)", "Vultures 1") is None
+    assert sub("Artist – Album (Limited Red Vinyl)", "Album") is None
+
+
+def test_subtitle_prefers_matching_album():
+    subtitle = "Music From The Theater Experience"
+    studio = tm.acceptable("Madonna", "Madame X", "Madonna - Madame X", subtitle)
+    live = tm.acceptable("Madonna", "Madame X", "Madonna - Madame X: Music From The Theater Experience", subtitle)
+    assert live > studio > 0
+    # без подзаголовка лишние слова по-прежнему означают другой альбом
+    assert tm.acceptable("Madonna", "Madame X", "Madonna - Madame X: Music From The Theater Experience") == 0
