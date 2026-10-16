@@ -71,6 +71,7 @@ h2 { font-size: 1.15rem; margin: 1.75rem 0 0.75rem; }
 .search-results li { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
 .search-results li.active, .search-results li:hover { background: var(--line); }
 .search-label { font-weight: 600; }
+.search-results li.search-all { flex-direction: row; margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; color: var(--accent); font-weight: 600; }
 .search-page { list-style: none; padding: 0; }
 .search-page li { display: flex; gap: 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .search-page li a { flex: 1; font-weight: 600; text-decoration: none; }

@@ -1,27 +1,36 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { getSearchIndex } from '../api.js'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { formatPrice, normalize } from '../format.js'
+import { findAlbums, loadSearchIndex } from '../search.js'
 
+const SUGGESTIONS = 8
+
+const route = useRoute()
 const router = useRouter()
 const query = ref('')
 const open = ref(false)
-const active = ref(0)
+// -1 — ничего не выбрано стрелками: Enter открывает страницу результатов
+const active = ref(-1)
 const index = ref(null)
 
+// На странице поиска поле показывает текущий запрос
+watch(
+  () => route.name === 'search' && route.query.q,
+  (q) => {
+    if (q) query.value = String(q)
+  },
+  { immediate: true },
+)
+
 async function ensureIndex() {
-  if (index.value) return
-  const rows = await getSearchIndex()
-  index.value = rows.map(([id, label, year, price]) => ({ id, label, year, price, key: normalize(label) }))
+  if (!index.value) index.value = await loadSearchIndex()
 }
 
-const results = computed(() => {
-  const q = normalize(query.value)
-  if (!index.value || q.length < 2) return []
-  const words = q.split(' ')
-  return index.value.filter((row) => words.every((w) => row.key.includes(w))).slice(0, 8)
-})
+const matches = computed(() => (normalize(query.value).length < 2 ? [] : findAlbums(index.value, query.value)))
+const suggestions = computed(() => matches.value.slice(0, SUGGESTIONS))
+// Последний пункт подсказок — «Показать все»
+const optionCount = computed(() => (suggestions.value.length ? suggestions.value.length + 1 : 0))
 
 function onFocus() {
   open.value = true
@@ -32,23 +41,36 @@ function onBlur() {
   setTimeout(() => (open.value = false), 150)
 }
 
-function go(row) {
+function onInput() {
+  active.value = -1
+  open.value = true
+}
+
+function goAlbum(row) {
   open.value = false
   query.value = ''
   router.push(`/album/${row.id}`)
 }
 
+function showAll() {
+  const q = query.value.trim()
+  if (!q) return
+  open.value = false
+  active.value = -1
+  router.push({ name: 'search', query: { q } })
+}
+
 function submit() {
-  if (results.value[active.value]) return go(results.value[active.value])
-  if (query.value.trim()) {
-    router.push({ name: 'search', query: { q: query.value.trim() } })
-    open.value = false
-  }
+  const row = suggestions.value[active.value]
+  if (row) goAlbum(row)
+  else showAll()
 }
 
 function move(step) {
-  const n = results.value.length
-  if (n) active.value = (active.value + step + n) % n
+  const n = optionCount.value
+  if (!n) return
+  open.value = true
+  active.value = active.value < 0 && step < 0 ? n - 1 : (active.value + step + n) % n
 }
 </script>
 
@@ -60,23 +82,34 @@ function move(step) {
       placeholder="Исполнитель или альбом"
       aria-label="Поиск по каталогу"
       autocomplete="off"
+      enterkeyhint="search"
       @focus="onFocus"
       @blur="onBlur"
-      @input="active = 0"
+      @input="onInput"
       @keydown.down.prevent="move(1)"
       @keydown.up.prevent="move(-1)"
       @keydown.esc="open = false"
     />
-    <ul v-if="open && results.length" class="search-results" role="listbox">
+    <ul v-if="open && suggestions.length" class="search-results" role="listbox">
       <li
-        v-for="(row, i) in results"
+        v-for="(row, i) in suggestions"
         :key="row.id"
         :class="{ active: i === active }"
         role="option"
-        @mousedown.prevent="go(row)"
+        :aria-selected="i === active"
+        @mousedown.prevent="goAlbum(row)"
       >
         <span class="search-label">{{ row.label }}</span>
         <span class="muted">{{ row.year || '' }} · от {{ formatPrice(row.price) }}</span>
+      </li>
+      <li
+        class="search-all"
+        :class="{ active: active === suggestions.length }"
+        role="option"
+        :aria-selected="active === suggestions.length"
+        @mousedown.prevent="showAll"
+      >
+        Показать все<span class="muted"> · {{ matches.length }}</span>
       </li>
     </ul>
   </form>
