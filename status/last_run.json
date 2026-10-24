@@ -1,86 +1,86 @@
 {
-  "started_at": "2026-10-23T00:00:16+00:00",
+  "started_at": "2026-10-23T23:52:23+00:00",
   "scrape": [
     {
       "shop": "stoprobot",
       "status": "ok",
-      "offers": 1714,
+      "offers": 1707,
       "changed": 0,
-      "out_of_stock": 9,
-      "seconds": 54
+      "out_of_stock": 4,
+      "seconds": 59
     },
     {
       "shop": "korobka",
       "status": "ok",
-      "offers": 865,
-      "changed": 2,
+      "offers": 867,
+      "changed": 9,
       "out_of_stock": 9,
-      "seconds": 8
+      "seconds": 6
     },
     {
       "shop": "vinylis",
       "status": "ok",
-      "offers": 6439,
-      "changed": 3,
-      "out_of_stock": 19,
-      "seconds": 856
+      "offers": 6422,
+      "changed": 0,
+      "out_of_stock": 22,
+      "seconds": 894
     },
     {
       "shop": "plstkwrld",
       "status": "ok",
-      "offers": 3347,
+      "offers": 3336,
       "changed": 1,
-      "out_of_stock": 5,
-      "seconds": 100
+      "out_of_stock": 10,
+      "seconds": 108
     },
     {
       "shop": "newartstore",
-      "status": "failed",
-      "offers": 0,
-      "changed": 0,
-      "out_of_stock": 0,
-      "error": "SSLError(MaxRetryError(\"HTTPSConnectionPool(host='newartstore.ru', port=443): Max retries exceeded with url: /catalog/vinilovye_plastinki/?PAGEN_1=1 (Caused by SSLError(SSLCertVerificationError(1, '[S",
-      "seconds": 46
+      "status": "ok",
+      "offers": 8532,
+      "changed": 28,
+      "out_of_stock": 6,
+      "seconds": 269
     },
     {
       "shop": "vidika",
       "status": "ok",
       "offers": 1498,
-      "changed": 18,
+      "changed": 9,
       "out_of_stock": 0,
-      "seconds": 134
+      "seconds": 145
     },
     {
       "shop": "stereozona",
       "status": "ok",
-      "offers": 789,
-      "changed": 3,
-      "out_of_stock": 12,
-      "seconds": 78
+      "offers": 783,
+      "changed": 1,
+      "out_of_stock": 11,
+      "seconds": 82
     },
     {
       "shop": "sferazvyka",
       "status": "ok",
-      "offers": 1549,
-      "changed": 0,
+      "offers": 1542,
+      "changed": 1,
       "out_of_stock": 1,
-      "seconds": 37
+      "seconds": 39
     }
   ],
   "match": {
-    "barcode": 2,
-    "text_local": 4,
-    "not_found": 2,
-    "api_calls": 6
+    "barcode": 4,
+    "text_local": 12,
+    "text": 6,
+    "not_found": 1,
+    "api_calls": 21
   },
   "refresh": {
     "refreshed": 500
   },
   "export": {
-    "albums": 12764,
-    "offers": 21094,
-    "catalog_pages": 1980,
-    "artists": 5536
+    "albums": 12749,
+    "offers": 21044,
+    "catalog_pages": 1977,
+    "artists": 5535
   },
-  "finished_at": "2026-10-23T00:31:14+00:00"
+  "finished_at": "2026-10-24T00:28:33+00:00"
 }
