@@ -1,87 +1,86 @@
 {
-  "started_at": "2026-10-28T00:32:34+00:00",
+  "started_at": "2026-10-29T01:00:26+00:00",
   "scrape": [
     {
       "shop": "stoprobot",
-      "status": "failed",
-      "offers": 0,
-      "changed": 0,
-      "out_of_stock": 0,
-      "error": "HTTPError('404 Client Error: Not Found for url: https://stoprobot.ru/collection/vinilovye-plastinki.json?page=1')",
-      "seconds": 1
+      "status": "ok",
+      "offers": 1724,
+      "changed": 48,
+      "out_of_stock": 4,
+      "seconds": 54
     },
     {
       "shop": "korobka",
       "status": "ok",
-      "offers": 842,
-      "changed": 10,
+      "offers": 837,
+      "changed": 2,
       "out_of_stock": 6,
-      "seconds": 10
+      "seconds": 8
     },
     {
       "shop": "vinylis",
       "status": "ok",
-      "offers": 6529,
-      "changed": 1,
-      "out_of_stock": 15,
-      "seconds": 964
+      "offers": 6505,
+      "changed": 0,
+      "out_of_stock": 19,
+      "seconds": 867
     },
     {
       "shop": "plstkwrld",
       "status": "ok",
-      "offers": 3292,
-      "changed": 0,
-      "out_of_stock": 11,
-      "seconds": 105
+      "offers": 3295,
+      "changed": 9,
+      "out_of_stock": 7,
+      "seconds": 99
     },
     {
       "shop": "newartstore",
       "status": "ok",
-      "offers": 8503,
-      "changed": 12,
-      "out_of_stock": 6,
-      "seconds": 501
+      "offers": 8514,
+      "changed": 28,
+      "out_of_stock": 9,
+      "seconds": 458
     },
     {
       "shop": "vidika",
       "status": "ok",
       "offers": 1498,
-      "changed": 3,
+      "changed": 6,
       "out_of_stock": 0,
-      "seconds": 133
+      "seconds": 132
     },
     {
       "shop": "stereozona",
       "status": "ok",
-      "offers": 766,
-      "changed": 7,
-      "out_of_stock": 6,
+      "offers": 763,
+      "changed": 5,
+      "out_of_stock": 2,
       "seconds": 71
     },
     {
       "shop": "sferazvyka",
       "status": "ok",
-      "offers": 1530,
+      "offers": 1529,
       "changed": 0,
-      "out_of_stock": 1,
-      "seconds": 37
+      "out_of_stock": 10,
+      "seconds": 35
     }
   ],
   "match": {
-    "barcode": 5,
-    "text_local": 9,
+    "barcode": 21,
+    "text_local": 13,
     "not_found": 2,
-    "text": 1,
-    "api_calls": 10
+    "text": 4,
+    "api_calls": 38
   },
   "refresh": {
     "refreshed": 500
   },
   "export": {
     "albums": 12761,
-    "offers": 21014,
+    "offers": 21004,
     "catalog_pages": 1977,
-    "artists": 5531
+    "artists": 5530
   },
-  "finished_at": "2026-10-28T01:12:07+00:00"
+  "finished_at": "2026-10-29T01:38:49+00:00"
 }
