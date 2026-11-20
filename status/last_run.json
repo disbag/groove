@@ -1,61 +1,61 @@
 {
-  "started_at": "2026-11-19T02:36:45+00:00",
+  "started_at": "2026-11-20T02:21:37+00:00",
   "scrape": [
     {
       "shop": "stoprobot",
       "status": "ok",
-      "offers": 1596,
-      "changed": 11,
-      "out_of_stock": 17,
-      "seconds": 50
+      "offers": 1598,
+      "changed": 18,
+      "out_of_stock": 31,
+      "seconds": 98
     },
     {
       "shop": "korobka",
       "status": "ok",
-      "offers": 730,
-      "changed": 3,
-      "out_of_stock": 9,
+      "offers": 726,
+      "changed": 4,
+      "out_of_stock": 8,
       "seconds": 5
     },
     {
       "shop": "vinylis",
       "status": "ok",
-      "offers": 6241,
-      "changed": 1,
-      "out_of_stock": 14,
-      "seconds": 832
+      "offers": 6220,
+      "changed": 0,
+      "out_of_stock": 18,
+      "seconds": 833
     },
     {
       "shop": "plstkwrld",
       "status": "ok",
-      "offers": 3264,
-      "changed": 0,
-      "out_of_stock": 10,
+      "offers": 3262,
+      "changed": 1,
+      "out_of_stock": 3,
       "seconds": 104
     },
     {
       "shop": "newartstore",
       "status": "ok",
-      "offers": 8232,
-      "changed": 5,
+      "offers": 8222,
+      "changed": 11,
       "out_of_stock": 6,
-      "seconds": 237
+      "seconds": 234
     },
     {
       "shop": "vidika",
       "status": "ok",
       "offers": 1642,
-      "changed": 4,
+      "changed": 11,
       "out_of_stock": 0,
-      "seconds": 159
+      "seconds": 207
     },
     {
       "shop": "stereozona",
       "status": "ok",
-      "offers": 630,
-      "changed": 0,
-      "out_of_stock": 3,
-      "seconds": 63
+      "offers": 626,
+      "changed": 3,
+      "out_of_stock": 0,
+      "seconds": 54
     },
     {
       "shop": "sferazvyka",
@@ -67,22 +67,20 @@
     }
   ],
   "match": {
-    "barcode": 1,
-    "text_local": 4,
-    "text": 2,
+    "barcode": 4,
     "text_master": 1,
-    "not_found": 1,
+    "text_local": 4,
+    "text": 1,
     "api_calls": 9
   },
   "refresh": {
-    "refreshed": 499,
-    "missing": 1
+    "refreshed": 500
   },
   "export": {
-    "albums": 12480,
-    "offers": 20083,
+    "albums": 12457,
+    "offers": 20025,
     "catalog_pages": 1929,
-    "artists": 5526
+    "artists": 5514
   },
-  "finished_at": "2026-11-19T03:10:40+00:00"
+  "finished_at": "2026-11-20T02:56:56+00:00"
 }
