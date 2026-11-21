@@ -1,61 +1,61 @@
 {
-  "started_at": "2026-11-20T02:21:37+00:00",
+  "started_at": "2026-11-21T02:22:11+00:00",
   "scrape": [
     {
       "shop": "stoprobot",
       "status": "ok",
-      "offers": 1598,
+      "offers": 1602,
       "changed": 18,
-      "out_of_stock": 31,
-      "seconds": 98
+      "out_of_stock": 4,
+      "seconds": 66
     },
     {
       "shop": "korobka",
       "status": "ok",
-      "offers": 726,
-      "changed": 4,
+      "offers": 716,
+      "changed": 2,
       "out_of_stock": 8,
-      "seconds": 5
+      "seconds": 4
     },
     {
       "shop": "vinylis",
       "status": "ok",
-      "offers": 6220,
+      "offers": 6184,
       "changed": 0,
-      "out_of_stock": 18,
-      "seconds": 833
+      "out_of_stock": 20,
+      "seconds": 857
     },
     {
       "shop": "plstkwrld",
       "status": "ok",
-      "offers": 3262,
-      "changed": 1,
+      "offers": 3374,
+      "changed": 124,
       "out_of_stock": 3,
-      "seconds": 104
+      "seconds": 107
     },
     {
       "shop": "newartstore",
       "status": "ok",
-      "offers": 8222,
-      "changed": 11,
-      "out_of_stock": 6,
-      "seconds": 234
+      "offers": 8214,
+      "changed": 18,
+      "out_of_stock": 10,
+      "seconds": 447
     },
     {
       "shop": "vidika",
       "status": "ok",
       "offers": 1642,
-      "changed": 11,
+      "changed": 4,
       "out_of_stock": 0,
-      "seconds": 207
+      "seconds": 180
     },
     {
       "shop": "stereozona",
       "status": "ok",
-      "offers": 626,
-      "changed": 3,
-      "out_of_stock": 0,
-      "seconds": 54
+      "offers": 622,
+      "changed": 1,
+      "out_of_stock": 7,
+      "seconds": 61
     },
     {
       "shop": "sferazvyka",
@@ -67,20 +67,20 @@
     }
   ],
   "match": {
-    "barcode": 4,
+    "barcode": 80,
+    "not_found": 2,
+    "text_local": 12,
     "text_master": 1,
-    "text_local": 4,
-    "text": 1,
-    "api_calls": 9
+    "api_calls": 48
   },
   "refresh": {
     "refreshed": 500
   },
   "export": {
-    "albums": 12457,
-    "offers": 20025,
+    "albums": 12471,
+    "offers": 20106,
     "catalog_pages": 1929,
-    "artists": 5514
+    "artists": 5515
   },
-  "finished_at": "2026-11-20T02:56:56+00:00"
+  "finished_at": "2026-11-21T03:01:26+00:00"
 }
