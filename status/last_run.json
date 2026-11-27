@@ -1,86 +1,160 @@
 {
-  "started_at": "2026-11-27T03:39:39+00:00",
+  "started_at": "2026-11-27T14:38:31+00:00",
   "scrape": [
     {
       "shop": "stoprobot",
       "status": "ok",
-      "offers": 1554,
-      "changed": 12,
+      "offers": 1543,
+      "changed": 1,
       "out_of_stock": 10,
+      "sections": {
+        "stoprobot": "пустой список товаров"
+      },
+      "unknown_stock": 0,
       "seconds": 60
     },
     {
       "shop": "korobka",
       "status": "ok",
-      "offers": 780,
-      "changed": 94,
-      "out_of_stock": 8,
-      "seconds": 47
+      "offers": 735,
+      "changed": 0,
+      "out_of_stock": 7,
+      "sections": {
+        "korobka": "конец списка срезов"
+      },
+      "unknown_stock": 0,
+      "seconds": 5
     },
     {
       "shop": "vinylis",
       "status": "ok",
-      "offers": 6069,
-      "changed": 6,
-      "out_of_stock": 19,
-      "seconds": 877
+      "offers": 6063,
+      "changed": 4,
+      "out_of_stock": 11,
+      "sections": {
+        "https://vinyl-is.ru/catalog/vinilovye_plastinki/": "404"
+      },
+      "unknown_stock": 0,
+      "seconds": 826
     },
     {
       "shop": "plstkwrld",
       "status": "ok",
-      "offers": 3354,
-      "changed": 4,
-      "out_of_stock": 16,
-      "seconds": 111
+      "offers": 3350,
+      "changed": 0,
+      "out_of_stock": 11,
+      "sections": {
+        "/magazin/folder/black-death-metal": "404",
+        "/magazin/folder/christmas": "404",
+        "/magazin/folder/classic-rock": "404",
+        "/magazin/folder/classical": "404",
+        "/magazin/folder/eastern-europe-russian": "404",
+        "/magazin/folder/electronic-dance": "404",
+        "/magazin/folder/emo-pop-punk": "404",
+        "/magazin/folder/exclusive-colored-vinyl": "404",
+        "/magazin/folder/hip-hop": "404",
+        "/magazin/folder/indie-alternative": "404",
+        "/magazin/folder/industrial-darkwave": "404",
+        "/magazin/folder/jazz": "404",
+        "/magazin/folder/k-pop": "404",
+        "/magazin/folder/metal": "404",
+        "/magazin/folder/novye-postupleniya": "404",
+        "/magazin/folder/pop": "404",
+        "/magazin/folder/psychodelic-garage": "404",
+        "/magazin/folder/punk-post-punk": "404",
+        "/magazin/folder/rarities": "404",
+        "/magazin/folder/rsd": "404",
+        "/magazin/folder/soul-rnb-funk": "404",
+        "/magazin/folder/soundtracks": "404",
+        "/magazin/folder/underground-hip-hop": "404",
+        "/magazin/folder/world-music": "404"
+      },
+      "unknown_stock": 0,
+      "seconds": 103
     },
     {
       "shop": "newartstore",
       "status": "ok",
-      "offers": 8112,
-      "changed": 30,
-      "out_of_stock": 4,
-      "seconds": 462
+      "offers": 8126,
+      "changed": 43,
+      "out_of_stock": 7,
+      "sections": {
+        "https://newartstore.ru/catalog/vinilovye_plastinki/": "повтор страницы"
+      },
+      "unknown_stock": 0,
+      "seconds": 5763
     },
     {
       "shop": "vidika",
-      "status": "ok",
-      "offers": 1642,
-      "changed": 676,
+      "status": "failed",
+      "offers": 0,
+      "changed": 0,
       "out_of_stock": 0,
-      "seconds": 172
+      "sections": {
+        "/category/zarubezhnyy-vinil/": "пустой раздел"
+      },
+      "error": "ValueError('Не распознаны карточки на странице 3 раздела /category/russkiy-vinil/')",
+      "seconds": 321
     },
     {
       "shop": "stereozona",
       "status": "ok",
-      "offers": 600,
-      "changed": 30,
-      "out_of_stock": 3,
-      "seconds": 54
+      "offers": 592,
+      "changed": 570,
+      "out_of_stock": 5,
+      "sections": {
+        "https://stereozona.ru/catalog/plastinki/": "повтор страницы"
+      },
+      "unknown_stock": 0,
+      "seconds": 47
     },
     {
       "shop": "sferazvyka",
       "status": "ok",
       "offers": 1503,
       "changed": 0,
-      "out_of_stock": 4,
-      "seconds": 39
+      "out_of_stock": 0,
+      "sections": {
+        "/shop/folder/novye": "404"
+      },
+      "unknown_stock": 0,
+      "seconds": 35
+    },
+    {
+      "shop": "doctorhead",
+      "status": "failed",
+      "offers": 0,
+      "changed": 0,
+      "out_of_stock": 0,
+      "sections": {},
+      "error": "HTTPError('403 Client Error: Forbidden for url: https://doctorhead.ru/catalog/muzyka/vinilovye-plastinki/?PAGEN_1=6')",
+      "seconds": 11
+    },
+    {
+      "shop": "respublica",
+      "status": "failed",
+      "offers": 0,
+      "changed": 0,
+      "out_of_stock": 0,
+      "sections": {},
+      "error": "ValueError('https://www.respublica.ru/muzyka-na-vinile: нет новых карточек на странице 20 из 20')",
+      "seconds": 59
     }
   ],
   "match": {
-    "barcode": 87,
-    "text": 5,
-    "text_local": 9,
-    "not_found": 5,
-    "api_calls": 43
+    "text_local": 13,
+    "text": 1,
+    "not_found": 7,
+    "api_calls": 16
   },
   "refresh": {
     "refreshed": 500
   },
   "export": {
-    "albums": 12352,
-    "offers": 19818,
-    "catalog_pages": 1917,
-    "artists": 5476
+    "albums": 12339,
+    "offers": 19785,
+    "catalog_pages": 1914,
+    "artists": 5467
   },
-  "finished_at": "2026-11-27T04:20:06+00:00"
+  "finished_at": "2026-11-27T16:48:19+00:00"
 }
