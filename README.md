@@ -26,6 +26,8 @@ Supabase (PostgreSQL) — хранилище конвейера; сайт к б�
 | `vidika` | vidika.su | Webasyst: категории с пластинками в наличии | — |
 | `stereozona` | stereozona.ru | Битрикс: раздел пластинок | — |
 | `sferazvyka` | sferazvyka.ru | Мегагрупп: папка «Новый винил» | — |
+| `doctorhead` | doctorhead.ru | Битрикс: цены и наличие в листинге винила | — |
+| `respublica` | respublica.ru | HTML-листинг винила, разметка schema.org | при наличии GTIN |
 | `pult` | pult.ru | JSON в HTML листинга — **выключен**: 403 серверам GitHub, затем JS-проверка на бота | ✅ |
 
 Без штрихкода позиции сопоставляются по «исполнитель + альбом» (`pipeline/textmatch.py`): исполнитель и альбом

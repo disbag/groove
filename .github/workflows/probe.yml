@@ -17,6 +17,8 @@ jobs:
             "https://vidika.su/category/russkiy-vinil/" \
             "https://stereozona.ru/catalog/plastinki/" \
             "https://sferazvyka.ru/shop/folder/novye" \
+            "https://doctorhead.ru/catalog/muzyka/vinilovye-plastinki/" \
+            "https://www.respublica.ru/muzyka-na-vinile" \
             "https://www.audiomania.ru/vinilovye_plastinki/" \
             "https://transylvania.ru/index.php?link=1&type=10"; do
             code=$(curl -s -o page.html -w '%{http_code}' -A "$UA" -H 'Accept-Language: ru-RU,ru;q=0.9' --max-time 30 "$u" || echo "ERR")

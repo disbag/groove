@@ -1,7 +1,7 @@
 """Общие помощники для HTML-адаптеров."""
 
 import re
-from urllib.parse import urljoin
+from urllib.parse import parse_qs, urljoin, urlsplit
 
 import requests
 from bs4 import BeautifulSoup
@@ -49,3 +49,24 @@ def get_page(http, url: str, params: dict | None = None, first: bool = False) ->
         if not first and exc.response is not None and exc.response.status_code == 404:
             return None
         raise
+
+def fetch_numbered_listing(http, url, page_param, pagination_selector, parse_listing, sections):
+    """Читаем только страницы, объявленные в пагинации самого каталога."""
+    offers = {}
+    last_page = 1
+    for page in range(1, 500):
+        response = http.get(url, params={page_param: page} if page > 1 else None)
+        doc = soup(response.text)
+        batch = parse_listing(doc)
+        if not any(offer.external_id not in offers for offer in batch):
+            raise ValueError(f"{url}: нет новых карточек на странице {page} из {last_page}")
+        offers.update((offer.external_id, offer) for offer in batch)
+        for link in doc.select(pagination_selector):
+            numbers = parse_qs(urlsplit(link["href"]).query).get(page_param, [])
+            if numbers and numbers[0].isdigit():
+                last_page = max(last_page, int(numbers[0]))
+        if page == last_page:
+            if sections is not None:
+                sections[url] = f"последняя страница ({page})"
+            return list(offers.values())
+    raise ValueError(f"{url}: достигнут предел страниц")
