@@ -10,6 +10,9 @@ from pathlib import Path
 from .normalize import fold, title_key
 from .textmatch import is_compilation
 
+# Магазины указывают David Bowie; в подписи Discogs также перечислены композиторы и оркестр.
+CATALOG_ARTIST_BY_MASTER = {50707: "David Bowie"}
+
 PAGE_SIZE = 48
 SORTS = {
     "new": lambda c: (-c["first_seen_at"].timestamp(), c["id"]),
@@ -40,7 +43,7 @@ GENRE_SLUG = {name: slug for slug, name, _ in GENRES}
 def run(conn, out_dir: Path) -> dict:
     cards = conn.execute("select * from catalog_card").fetchall()
     for card in cards:
-        card["artist_display"] = collapse_repeated_artist(card["artist_display"])
+        card["artist_display"] = CATALOG_ARTIST_BY_MASTER.get(card["id"]) or collapse_repeated_artist(card["artist_display"])
     offers = conn.execute(
         """select o.master_id, o.price, o.url, o.color, o.color_raw, o.format_qty, o.image_url,
                   s.code as shop, s.name as shop_name,
