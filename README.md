@@ -36,7 +36,7 @@ Soundtrack)» и «= Slovo» не мешают, а лишние слова и н
 После улучшения алгоритма ненайденное можно перепроверить: `python -m pipeline match --retry-not-found`
 или запуск Nightly update с галочкой `retry_not_found`.
 
-Новый магазин — это модуль в `pipeline/adapters/` с `SHOP` и `fetch(http) -> list[Offer]`, добавленный в `ADAPTERS`.
+Новый магазин — это модуль в `pipeline/adapters/` с `SHOP` и `fetch(http, *, sections=None) -> list[Offer]`, добавленный в `ADAPTERS`.
 Магазин можно временно выключить в базе: `update shop set is_active = false where code = '...'`.
 
 ## Настройка (один раз)
@@ -53,12 +53,13 @@ Soundtrack)» и «= Slovo» не мешают, а лишние слова и н
 ## Локальный сбор (Пульт)
 
 Пульт отвечает 403 серверам GitHub, поэтому в Actions он пропускается (`GROOVE_SHOPS_EXCLUDE=pult`)
-и собирается с домашнего компьютера в ту же базу Supabase:
+и при проверке 27 ноября 2026 года вернул 403 также с локального компьютера. Локальный сбор стоит включать после подтверждения доступа или подключения согласованного с магазином фида. Для доступного источника команды ниже записывают результат в Supabase:
 
 ```bash
 # app/.env.production — строка Session pooler (не попадает в git)
 read -rs "DB?Supabase Session pooler URL: " && printf 'DATABASE_URL=%s\n' "$DB" > .env.production \
   && grep '^DISCOGS_TOKEN=' .env >> .env.production && chmod 600 .env.production
+GROOVE_ENV_FILE=.env.production .venv/bin/python -m pipeline migrate
 scripts/local_run.sh              # сбор Пульта + сопоставление; лог: ~/Library/Logs/groove-local.log
 scripts/install_launchd.sh        # ежедневно в 23:30, до ночного прогона на GitHub; --remove — удалить
 .venv/bin/python scripts/copy_catalog.py --source .env --target .env.production   # перенести найденное локально

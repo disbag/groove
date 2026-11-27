@@ -4,11 +4,16 @@ import logging
 import time
 
 import requests
+from urllib3.util.retry import Retry
 
 from . import config
 
 log = logging.getLogger(__name__)
 API = "https://api.discogs.com"
+
+
+class DiscogsAuthError(RuntimeError):
+    pass
 
 
 class Discogs:
@@ -35,9 +40,13 @@ class Discogs:
                 time.sleep(5 * (attempt + 1))
                 continue
             if response.status_code == 429:
-                log.warning("Discogs: превышен лимит, пауза 60 с")
-                time.sleep(60)
+                delay = Retry().get_retry_after(response)
+                delay = 60 if delay is None else delay
+                log.warning("Discogs: превышен лимит, пауза %s с", delay)
+                time.sleep(delay)
                 continue
+            if response.status_code in (401, 403):
+                raise DiscogsAuthError(f"Discogs отклонил доступ (HTTP {response.status_code})")
             if response.status_code == 404:
                 return None
             if response.status_code >= 500:

@@ -18,20 +18,32 @@ TITLE_PREFIX = re.compile(r"^виниловая пластинка\s+", re.I)
 COUNTRY_PREFIX = re.compile(r"^(США|UK|EU|Европа|Япония|Japan|Германия|Germany)\s+", re.I)
 
 
-def fetch(http: PoliteSession) -> list[Offer]:
+def fetch(http: PoliteSession, *, sections: dict | None = None) -> list[Offer]:
     offers: dict[str, Offer] = {}
     for category in CATEGORIES:
         seen_in_category: set[str] = set()
         for page in range(1, 500):
             html = _html.get_page(http, SHOP.base_url + category, {"page": page}, first=page == 1)
             if html is None:
+                reason = "404"
                 break
             batch = parse_listing(html)
             fresh = [o for o in batch if o.external_id not in seen_in_category]
+            if not batch and "Не найдено ни одного товара." in html:
+                reason = "пустой раздел"
+                break
+            if not batch:
+                raise ValueError(f"Не распознаны карточки на странице {page} раздела {category}")
             if not fresh:
+                reason = "повтор страницы"
                 break
             seen_in_category.update(o.external_id for o in fresh)
             offers.update((o.external_id, o) for o in fresh)
+        else:
+            raise ValueError(f"Достигнут предел страниц раздела {category}")
+        if sections is not None:
+            sections[category] = reason
+
     return list(offers.values())
 
 

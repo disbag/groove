@@ -17,6 +17,7 @@ class Offer:
     color_raw: str | None = None
     format_qty: int | None = None
     image_url: str | None = None
+    stock_unknown: bool = False
 
 
 @dataclass(frozen=True)

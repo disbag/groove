@@ -13,17 +13,26 @@ SHOP = Shop(code="stereozona", name="Стереозона", base_url="https://st
 LISTING = f"{SHOP.base_url}/catalog/plastinki/"
 
 
-def fetch(http: PoliteSession) -> list[Offer]:
+def fetch(http: PoliteSession, *, sections: dict | None = None) -> list[Offer]:
     offers: dict[str, Offer] = {}
     for page in range(1, 500):
         html = _html.get_page(http, LISTING, {"PAGEN_1": page}, first=page == 1)
         if html is None:
+            reason = "404"
             break
         batch = parse_listing(html)
         fresh = [o for o in batch if o.external_id not in offers]
+        if not batch:
+            raise ValueError(f"Не распознаны карточки на странице {page} раздела {LISTING}")
         if not fresh:
+            reason = "повтор страницы"
             break
         offers.update((o.external_id, o) for o in fresh)
+    else:
+        raise ValueError(f"Достигнут предел страниц раздела {LISTING}")
+    if sections is not None:
+        sections[LISTING] = reason
+
     return list(offers.values())
 
 

@@ -17,7 +17,7 @@ TITLE_PREFIX = re.compile(r"^виниловая пластинка\s+", re.I)
 NON_VINYL_FORMAT = re.compile(r"\b(CD|Cassette|Кассета|DVD|Blu-?ray)\b", re.I)
 
 
-def fetch_folder(http: PoliteSession, base_url: str, folder: str, into: dict[str, Offer]) -> None:
+def fetch_folder(http: PoliteSession, base_url: str, folder: str, into: dict[str, Offer], sections: dict | None = None) -> None:
     """Обходит страницы папки и добавляет новые позиции в into (по product_id).
 
     Конец папки определяем по её собственным позициям: в жанровых папках plstkwrld одни и те же пластинки
@@ -28,17 +28,29 @@ def fetch_folder(http: PoliteSession, base_url: str, folder: str, into: dict[str
         url = f"{base_url}{folder}" + (f"/p/{page}" if page else "")
         html = _html.get_page(http, url, first=page == 0)
         if html is None:
+            reason = "404"
             break  # у папки меньше страниц: /p/N отвечает 404
-        fresh = [o for o in parse_listing(html, base_url) if o.external_id not in seen]
-        if not fresh:
-            break  # пустая страница или повтор последней
-        seen.update(o.external_id for o in fresh)
-        for offer in fresh:
+        doc = _html.soup(html)
+        ids = {el["value"] for el in doc.select("form.shop2-product-item input[name=product_id][value]")}
+        if not ids:
+            raise ValueError(f"Не распознаны карточки на странице {page} раздела {folder}")
+        if ids <= seen:
+            reason = "повтор страницы"
+            break
+        seen.update(ids)
+        for offer in _parse_doc(doc, base_url):
             into.setdefault(offer.external_id, offer)
+    else:
+        raise ValueError(f"Достигнут предел страниц раздела {folder}")
+    if sections is not None:
+        sections[folder] = reason
 
 
 def parse_listing(html: str, base_url: str) -> list[Offer]:
-    doc = _html.soup(html)
+    return _parse_doc(_html.soup(html), base_url)
+
+
+def _parse_doc(doc, base_url):
     offers: dict[str, Offer] = {}
     for card in doc.select("form.shop2-product-item"):
         pid = card.select_one("input[name=product_id]")

@@ -139,3 +139,37 @@ def _not_found():
     response = requests.Response()
     response.status_code = 404
     raise requests.HTTPError("404", response=response)
+
+
+def test_available_variant_sets_price_and_barcode():
+    from pipeline.adapters import korobka, stoprobot
+    variants = [
+        {"price": 1000, "quantity": 0, "available": False},
+        {"price": 3000, "quantity": 1, "available": True},
+        {"price": 2000, "quantity": 1, "available": True, "sku": "0602445228997", "barcode": "0602445228997"},
+    ]
+    product = {"id": 1, "uid": 1, "url": "/album", "title": "A - B", "available": True,
+               "price": 1000, "editions": variants, "variants": variants}
+    for offer in (korobka._parse(product, set()), stoprobot._parse(product)):
+        assert offer.in_stock and offer.price == 2000 and offer.barcode == "0602445228997"
+
+
+def test_missing_stock_is_unknown():
+    html = load("vinylis").replace('class="item-stock"', 'class="unknown"')
+    assert all(o.stock_unknown and not o.in_stock for o in vinylis.parse_listing(html))
+
+
+def test_unrecognized_page_fails():
+    import pytest
+    from pipeline.adapters import pult
+    with pytest.raises(ValueError):
+        vinylis.fetch(FakeHttp("<html>maintenance</html>"))
+    with pytest.raises(ValueError):
+        pult.extract_products("<html>maintenance</html>")
+    assert pult.extract_products("products: []") == []
+
+
+def test_vidika_explicit_empty_category():
+    sections = {}
+    assert vidika.fetch(FakeHttp("<p>Не найдено ни одного товара.</p>"), sections=sections) == []
+    assert sections == dict.fromkeys(vidika.CATEGORIES, "пустой раздел")

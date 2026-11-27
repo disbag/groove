@@ -10,17 +10,23 @@ SHOP = Shop(code="stoprobot", name="Stoprobot", base_url="https://stoprobot.ru",
 COLLECTION = "vinilovye-plastinki"
 
 
-def fetch(http: PoliteSession) -> list[Offer]:
+def fetch(http: PoliteSession, *, sections: dict | None = None) -> list[Offer]:
     offers: list[Offer] = []
     for page in range(1, 500):
         data = http.get(f"{SHOP.base_url}/collection/{COLLECTION}.json", params={"page": page}).json()
-        products = data.get("products") or []
+        products = data["products"]
+        if not isinstance(products, list):
+            raise ValueError("Некорректный список товаров InSales")
         if not products:
             break
         for product in products:
             offer = _parse(product)
             if offer:
                 offers.append(offer)
+    else:
+        raise ValueError("Достигнут предел страниц InSales")
+    if sections is not None:
+        sections[SHOP.code] = 'пустой список товаров'
     return offers
 
 
@@ -34,7 +40,10 @@ def _parse(product: dict) -> Offer | None:
     if fmt and not re.search(r"lp|винил|vinyl|\d+\"|box", fmt, re.I):
         return None  # CD, кассеты, аксессуары
 
-    variant = (product.get("variants") or [{}])[0]
+    variants = product.get("variants") or [{}]
+    available = [v for v in variants if v.get("available", True)]
+    variant = min(available or variants, key=lambda v: to_price(v.get("price")) or float("inf"))
+    price = variant.get("price") or (product.get("price_min") if len(variants) == 1 else None)
     title = unescape(product.get("title"))
     if re.search(r"\|\s*used\b", title, re.I):
         return None  # б/у, у которых забыли поменять «Состояние»
@@ -44,7 +53,7 @@ def _parse(product: dict) -> Offer | None:
         external_id=str(product["id"]),
         url=SHOP.base_url + product["url"],
         raw_title=title,
-        price=to_price(variant.get("price") or product.get("price_min")),
+        price=to_price(price),
         in_stock=bool(product.get("available")) and bool(variant.get("available", True)),
         barcode=clean_barcode(variant.get("barcode")),
         artist_hint=chars.get("Исполнитель"),

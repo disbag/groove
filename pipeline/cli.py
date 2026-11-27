@@ -40,7 +40,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "migrate":
         db.migrate(conn)
     elif args.command == "scrape":
-        scrape.run(conn, args.shops.split(",") if args.shops else None)
+        shops = scrape.run(conn, args.shops.split(",") if args.shops else None)
+        return 0 if any(s["status"] in ("ok", "partial") and s["offers"] for s in shops) else 1
     elif args.command == "match":
         match.run(conn, Discogs(), args.budget_minutes, args.limit, args.retry_not_found)
     elif args.command == "refresh":

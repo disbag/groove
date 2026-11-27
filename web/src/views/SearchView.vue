@@ -48,7 +48,7 @@ watch(
       details[item.id] = null // загружается
       getAlbum(item.id)
         .then((album) => (details[item.id] = toItem(album)))
-        .catch(() => delete details[item.id])
+        .catch(() => { details[item.id] = item })
     }
   },
   { immediate: true },

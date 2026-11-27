@@ -16,7 +16,7 @@ LISTING = f"{SHOP.base_url}/product/vinilovye-plastinki-new/"
 TITLE_PREFIX = re.compile(r"^виниловая пластинка\s+", re.I)
 
 
-def fetch(http: PoliteSession) -> list[Offer]:
+def fetch(http: PoliteSession, *, sections: dict | None = None) -> list[Offer]:
     offers: list[Offer] = []
     seen_ids: set[str] = set()
     empty_pages = 0
@@ -24,6 +24,7 @@ def fetch(http: PoliteSession) -> list[Offer]:
         products = extract_products(http.get(LISTING, params={"PAGEN_1": page}).text)
         fresh = [p for p in products if str(p.get("id")) not in seen_ids]
         if not fresh:
+            reason = "конец списка товаров"
             break  # вышли за последнюю страницу: Битрикс отдаёт её повторно
         in_stock = 0
         for product in fresh:
@@ -34,14 +35,20 @@ def fetch(http: PoliteSession) -> list[Offer]:
                 offers.append(offer)
         empty_pages = 0 if in_stock else empty_pages + 1
         if empty_pages >= 2:
+            reason = "две страницы без наличия"
             break
+    else:
+        raise ValueError("Достигнут предел страниц Пульта")
+    if sections is not None:
+        sections[SHOP.code] = reason
     return offers
 
 
 def extract_products(page_html: str) -> list[dict]:
-    start = page_html.find("products: [")
-    if start < 0:
-        return []
+    marker = re.search(r"\bproducts\s*:\s*\[", page_html)
+    if marker is None:
+        raise ValueError("В листинге Пульта отсутствует массив products")
+    start = marker.start()
     start = page_html.index("[", start)
     depth, in_string, escaped = 0, False, False
     for pos in range(start, len(page_html)):
@@ -61,7 +68,7 @@ def extract_products(page_html: str) -> list[dict]:
             depth -= 1
             if depth == 0:
                 return json.loads(page_html[start:pos + 1])
-    return []
+    raise ValueError("Оборванный массив products в листинге Пульта")
 
 
 def _parse(product: dict) -> Offer:

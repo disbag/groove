@@ -13,7 +13,7 @@ SHOP = Shop(code="plstkwrld", name="PLSTK WRLD", base_url="https://plstkwrld.com
 SKIP_FOLDERS = re.compile(r"accessor|book|hifi|merch|gift|sertif|certificate|cassette|kasset|\bcd\b|poster", re.I)
 
 
-def fetch(http: PoliteSession) -> list[Offer]:
+def fetch(http: PoliteSession, *, sections: dict | None = None) -> list[Offer]:
     doc = _html.soup(http.get(f"{SHOP.base_url}/magazin").text)
     folders = sorted({
         a["href"].split("?")[0].rstrip("/")
@@ -22,5 +22,5 @@ def fetch(http: PoliteSession) -> list[Offer]:
     })
     offers: dict[str, Offer] = {}
     for folder in folders:
-        _megagroup.fetch_folder(http, SHOP.base_url, folder, offers)
+        _megagroup.fetch_folder(http, SHOP.base_url, folder, offers, sections)
     return list(offers.values())

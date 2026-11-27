@@ -20,7 +20,7 @@ REC_ID = "771567999"
 USED_PART = re.compile(r"used|vintage|винтаж|б/у", re.I)  # разделы «Used», «VINTAGE», «Редкий Винтаж»
 
 
-def fetch(http: PoliteSession) -> list[Offer]:
+def fetch(http: PoliteSession, *, sections: dict | None = None) -> list[Offer]:
     params = {
         "storepartuid": STOREPART_UID,
         "recid": REC_ID,
@@ -35,17 +35,23 @@ def fetch(http: PoliteSession) -> list[Offer]:
     used_part_ids: set[str] = set()
     offers: list[Offer] = []
     slice_no, seen = 1, set()
-    while slice_no and slice_no not in seen:
-        seen.add(slice_no)
+    while slice_no and str(slice_no) not in seen:
+        seen.add(str(slice_no))
         data = http.get(API, params={**params, "slice": str(slice_no)}, headers=headers).json()
         for part in data.get("parts") or []:
             if USED_PART.search(part.get("title") or ""):
                 used_part_ids.add(str(part.get("uid")))
-        for product in data.get("products") or []:
+        if not isinstance(data.get("products"), list):
+            raise ValueError("Некорректный список товаров Tilda")
+        for product in data["products"]:
             offer = _parse(product, used_part_ids)
             if offer:
                 offers.append(offer)
         slice_no = data.get("nextslice")
+    if slice_no:
+        raise ValueError("Tilda повторила номер среза")
+    if sections is not None:
+        sections[SHOP.code] = 'конец списка срезов'
     return offers
 
 
@@ -62,7 +68,9 @@ def _parse(product: dict, used_part_ids: set[str]) -> Offer | None:
     if parts & used_part_ids:
         return None
     editions = product.get("editions") or [{}]
-    quantity = max(float(e.get("quantity") or 0) for e in editions)
+    available = [e for e in editions if float(e.get("quantity") or 0) > 0]
+    edition = min(available or editions, key=lambda e: to_price(e.get("price")) or float("inf"))
+    fallback = product if len(editions) == 1 else {}
     title = unescape(product.get("title"))
     # построчно: unescape схлопывает пробелы, а поле «Format:» должно кончаться на своей строке
     lines = re.split(r"<br\s*/?>|\n", product.get("descr") or "", flags=re.I)
@@ -71,7 +79,7 @@ def _parse(product: dict, used_part_ids: set[str]) -> Offer | None:
     color_raw = color_part_of_title(title) or fmt or None
     artist, album = split_title(title)
     gallery = product.get("gallery")
-    image = editions[0].get("img")
+    image = edition.get("img")
     if not image and isinstance(gallery, str):
         match = re.search(r'"img"\s*:\s*"([^"]+)"', gallery)
         image = match.group(1) if match else None
@@ -79,9 +87,9 @@ def _parse(product: dict, used_part_ids: set[str]) -> Offer | None:
         external_id=str(product.get("uid")),
         url=product.get("url") or f"{SHOP.base_url}/catalog",
         raw_title=title,
-        price=to_price(product.get("price") or editions[0].get("price")),
-        in_stock=quantity > 0,
-        barcode=clean_barcode(product.get("sku") or editions[0].get("sku")),
+        price=to_price(edition.get("price") or fallback.get("price")),
+        in_stock=bool(available),
+        barcode=clean_barcode(edition.get("sku") or fallback.get("sku")),
         artist_hint=artist,
         album_hint=album,
         color=detect_color(color_raw),

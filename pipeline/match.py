@@ -11,7 +11,7 @@ from collections import defaultdict
 from psycopg.types.json import Jsonb
 
 from . import textmatch
-from .discogs import Discogs
+from .discogs import Discogs, DiscogsAuthError
 from .normalize import barcode_key, clean_barcode, clean_discogs_name, detect_color, detect_qty, title_key, unescape
 
 log = logging.getLogger(__name__)
@@ -48,6 +48,8 @@ def run(conn, discogs: Discogs, budget_minutes: float = 240, limit: int | None =
             continue
         try:
             _match_barcode(conn, discogs, key, offers, stats)
+        except DiscogsAuthError:
+            raise
         except Exception:  # noqa: BLE001 — сбой одной позиции не останавливает сопоставление
             log.exception("штрихкод %s: ошибка, позиция останется pending", key)
             stats["errors"] += 1
@@ -57,6 +59,8 @@ def run(conn, discogs: Discogs, budget_minutes: float = 240, limit: int | None =
             continue
         try:
             _match_text(conn, discogs, offer, stats)
+        except DiscogsAuthError:
+            raise
         except Exception:  # noqa: BLE001
             log.exception("позиция %s: ошибка, останется pending", offer["id"])
             stats["errors"] += 1
@@ -417,6 +421,8 @@ def refresh(conn, discogs: Discogs, limit: int = 500, budget_minutes: float = 15
             continue
         try:
             data = discogs.master(master_id) if master_id > 0 else discogs.release(-master_id)
+        except DiscogsAuthError:
+            raise
         except Exception:  # noqa: BLE001
             log.exception("альбом %s: не удалось обновить", master_id)
             stats["errors"] += 1

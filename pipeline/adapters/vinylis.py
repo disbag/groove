@@ -16,18 +16,27 @@ LISTING = f"{SHOP.base_url}/catalog/vinilovye_plastinki/"
 CRAWL_DELAY = 2.0
 
 
-def fetch(http: PoliteSession) -> list[Offer]:
+def fetch(http: PoliteSession, *, sections: dict | None = None) -> list[Offer]:
     http.throttle(LISTING, CRAWL_DELAY)
     offers: dict[str, Offer] = {}
     for page in range(1, 1000):
         html = _html.get_page(http, LISTING, {"PAGEN_1": page}, first=page == 1)
         if html is None:
+            reason = "404"
             break  # за последней страницей — 404
         batch = parse_listing(html)
         fresh = [o for o in batch if o.external_id not in offers]
+        if not batch:
+            raise ValueError(f"Не распознаны карточки на странице {page} раздела {LISTING}")
         if not fresh:
+            reason = "повтор страницы"
             break  # за последней страницей Битрикс отдаёт её же
         offers.update((o.external_id, o) for o in fresh)
+    else:
+        raise ValueError(f"Достигнут предел страниц раздела {LISTING}")
+    if sections is not None:
+        sections[LISTING] = reason
+
     return list(offers.values())
 
 
@@ -41,6 +50,10 @@ def parse_listing(html: str) -> list[Offer]:
             continue
         title = button["data-name"]
         stock = _html.text(info.select_one(".item-stock .value"))
+        positive_stock = stock.casefold() in {"много", "достаточно", "мало", "в наличии"} or bool(
+            stock and info.select_one(".item-stock .icon.stock")
+        )
+        negative_stock = bool(_html.OUT_OF_STOCK.search(stock))
         card = info.parent
         artist, album = split_title(title)
         edition = edition_text(title)
@@ -49,7 +62,8 @@ def parse_listing(html: str) -> list[Offer]:
             url=_html.absolute(SHOP.base_url, link["href"]),
             raw_title=title,
             price=_html.price(button.get("data-price")),
-            in_stock=not _html.OUT_OF_STOCK.search(stock),
+            in_stock=positive_stock and not negative_stock,
+            stock_unknown=not positive_stock and not negative_stock,
             artist_hint=artist,
             album_hint=album,
             color=detect_color(edition),

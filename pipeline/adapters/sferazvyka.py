@@ -8,7 +8,7 @@ SHOP = Shop(code="sferazvyka", name="Сфера звука", base_url="https://s
 FOLDER = "/shop/folder/novye"
 
 
-def fetch(http: PoliteSession) -> list[Offer]:
+def fetch(http: PoliteSession, *, sections: dict | None = None) -> list[Offer]:
     offers: dict[str, Offer] = {}
-    _megagroup.fetch_folder(http, SHOP.base_url, FOLDER, offers)
+    _megagroup.fetch_folder(http, SHOP.base_url, FOLDER, offers, sections)
     return list(offers.values())

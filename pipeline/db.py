@@ -4,6 +4,7 @@ from datetime import datetime
 
 import psycopg
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 
 from . import config
 from .models import Offer, Shop
@@ -43,21 +44,21 @@ def start_run(conn: psycopg.Connection, shop_id: int) -> tuple[int, datetime]:
 
 
 def finish_run(conn, run_id: int, status: str, offers_seen: int = 0, offers_changed: int = 0,
-               error: str | None = None) -> None:
+               error: str | None = None, sections: dict | None = None) -> None:
     conn.execute(
-        """update scrape_run set finished_at = now(), status = %s, offers_seen = %s, offers_changed = %s, error = %s
+        """update scrape_run set finished_at = now(), status = %s, offers_seen = %s, offers_changed = %s, error = %s, sections = %s
            where id = %s""",
-        (status, offers_seen, offers_changed, error, run_id),
+        (status, offers_seen, offers_changed, error, Jsonb(sections) if sections else None, run_id),
     )
 
 
-def previous_seen(conn, shop_id: int) -> int | None:
+def previous_full_run(conn, shop_id: int) -> dict | None:
     row = conn.execute(
-        """select offers_seen from scrape_run where shop_id = %s and status = 'ok'
+        """select offers_seen, sections from scrape_run where shop_id = %s and status = 'ok'
            order by started_at desc limit 1""",
         (shop_id,),
     ).fetchone()
-    return row["offers_seen"] if row else None
+    return row
 
 
 _UPSERT = """
