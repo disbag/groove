@@ -1,48 +1,46 @@
 {
-  "started_at": "2026-11-27T14:38:31+00:00",
+  "started_at": "2026-11-28T03:20:20+00:00",
   "scrape": [
     {
       "shop": "stoprobot",
-      "status": "ok",
-      "offers": 1543,
-      "changed": 1,
-      "out_of_stock": 10,
-      "sections": {
-        "stoprobot": "пустой список товаров"
-      },
-      "unknown_stock": 0,
-      "seconds": 60
+      "status": "failed",
+      "offers": 0,
+      "changed": 0,
+      "out_of_stock": 0,
+      "sections": {},
+      "error": "HTTPError('404 Client Error: Not Found for url: https://stoprobot.ru/collection/vinilovye-plastinki.json?page=1')",
+      "seconds": 1
     },
     {
       "shop": "korobka",
       "status": "ok",
-      "offers": 735,
-      "changed": 0,
-      "out_of_stock": 7,
+      "offers": 754,
+      "changed": 25,
+      "out_of_stock": 43,
       "sections": {
         "korobka": "конец списка срезов"
       },
       "unknown_stock": 0,
-      "seconds": 5
+      "seconds": 9
     },
     {
       "shop": "vinylis",
       "status": "ok",
-      "offers": 6063,
-      "changed": 4,
-      "out_of_stock": 11,
+      "offers": 6058,
+      "changed": 1,
+      "out_of_stock": 9,
       "sections": {
         "https://vinyl-is.ru/catalog/vinilovye_plastinki/": "404"
       },
       "unknown_stock": 0,
-      "seconds": 826
+      "seconds": 820
     },
     {
       "shop": "plstkwrld",
       "status": "ok",
-      "offers": 3350,
+      "offers": 3341,
       "changed": 0,
-      "out_of_stock": 11,
+      "out_of_stock": 4,
       "sections": {
         "/magazin/folder/black-death-metal": "404",
         "/magazin/folder/christmas": "404",
@@ -70,19 +68,19 @@
         "/magazin/folder/world-music": "404"
       },
       "unknown_stock": 0,
-      "seconds": 103
+      "seconds": 101
     },
     {
       "shop": "newartstore",
       "status": "ok",
-      "offers": 8126,
-      "changed": 43,
-      "out_of_stock": 7,
+      "offers": 8141,
+      "changed": 42,
+      "out_of_stock": 0,
       "sections": {
         "https://newartstore.ru/catalog/vinilovye_plastinki/": "повтор страницы"
       },
       "unknown_stock": 0,
-      "seconds": 5763
+      "seconds": 361
     },
     {
       "shop": "vidika",
@@ -94,19 +92,19 @@
         "/category/zarubezhnyy-vinil/": "пустой раздел"
       },
       "error": "ValueError('Не распознаны карточки на странице 3 раздела /category/russkiy-vinil/')",
-      "seconds": 321
+      "seconds": 150
     },
     {
       "shop": "stereozona",
       "status": "ok",
-      "offers": 592,
-      "changed": 570,
-      "out_of_stock": 5,
+      "offers": 587,
+      "changed": 1,
+      "out_of_stock": 7,
       "sections": {
         "https://stereozona.ru/catalog/plastinki/": "повтор страницы"
       },
       "unknown_stock": 0,
-      "seconds": 47
+      "seconds": 56
     },
     {
       "shop": "sferazvyka",
@@ -122,39 +120,45 @@
     },
     {
       "shop": "doctorhead",
-      "status": "failed",
-      "offers": 0,
-      "changed": 0,
+      "status": "ok",
+      "offers": 2716,
+      "changed": 2716,
       "out_of_stock": 0,
-      "sections": {},
-      "error": "HTTPError('403 Client Error: Forbidden for url: https://doctorhead.ru/catalog/muzyka/vinilovye-plastinki/?PAGEN_1=6')",
-      "seconds": 11
+      "sections": {
+        "https://doctorhead.ru/catalog/muzyka/vinilovye-plastinki/": "последняя страница (94)"
+      },
+      "unknown_stock": 5,
+      "seconds": 233
     },
     {
       "shop": "respublica",
-      "status": "failed",
-      "offers": 0,
-      "changed": 0,
+      "status": "ok",
+      "offers": 597,
+      "changed": 597,
       "out_of_stock": 0,
-      "sections": {},
-      "error": "ValueError('https://www.respublica.ru/muzyka-na-vinile: нет новых карточек на странице 20 из 20')",
-      "seconds": 59
+      "sections": {
+        "https://www.respublica.ru/muzyka-na-vinile": "последняя страница (19)"
+      },
+      "unknown_stock": 0,
+      "seconds": 53
     }
   ],
   "match": {
-    "text_local": 13,
-    "text": 1,
-    "not_found": 7,
-    "api_calls": 16
+    "barcode": 25,
+    "text": 717,
+    "text_local": 1096,
+    "not_found": 519,
+    "text_master": 16,
+    "api_calls": 2490
   },
   "refresh": {
     "refreshed": 500
   },
   "export": {
-    "albums": 12339,
-    "offers": 19785,
-    "catalog_pages": 1914,
-    "artists": 5467
+    "albums": 13104,
+    "offers": 21577,
+    "catalog_pages": 2034,
+    "artists": 5801
   },
-  "finished_at": "2026-11-27T16:48:19+00:00"
+  "finished_at": "2026-11-28T04:43:32+00:00"
 }
